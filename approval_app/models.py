@@ -64,3 +64,31 @@ class Task(TimestampMixin):
 
     def __str__(self):
         return f"Task for {self.client_id.first_name} {self.client_id.last_name}: {self.task} ({self.task_status})"
+    
+
+class StageOne(TimestampMixin):
+    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approverone')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stageone')
+    task_status = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'stage_one'
+
+class StageTwo(TimestampMixin):
+    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approvertwo')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stagetwo')
+    task_status = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'stage_two'
+
+class StageThree(TimestampMixin):
+    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approverthree')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stagethree')
+    task_status = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'stage_three'
+
+
+
