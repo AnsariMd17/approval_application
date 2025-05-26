@@ -39,3 +39,28 @@ class Client(TimestampMixin):
     
     def __str__(self):
         return f"{self.first_name} ({self.last_name})"
+    
+
+class Task(TimestampMixin):
+    """
+    Task model for managing tasks related to clients
+    """
+    client_id = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='tasks')
+    task = models.CharField(max_length=255)
+    task_status = models.CharField(max_length=50, choices=[
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('incomplete', 'Incomplete'),
+    ], default='pending')
+    task_description = models.TextField(blank=True, null=True)
+    task_due_date = models.DateField(blank=True, null=True)
+    task_completed_date = models.DateField(blank=True, null=True)
+    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='tasks', blank=True, null=True)
+
+    class Meta:
+        db_table = 'approval_app_task'
+
+    def __str__(self):
+        return f"Task for {self.client_id.first_name} {self.client_id.last_name}: {self.task} ({self.task_status})"
