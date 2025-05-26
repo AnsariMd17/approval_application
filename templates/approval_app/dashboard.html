@@ -1,0 +1,42 @@
+{% extends 'approval_app/base.html' %}
+{% block content %}
+<div class="container">
+    <h2>Welcome, {{ user.first_name }}!</h2>
+    <hr>
+    <h4>Client List</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Program</th>
+                <th>Date of Birth</th>
+                <th>Approval Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr>
+                <td>{{ client.first_name }} {{ client.last_name }}</td>
+                <td>{{ client.program }}</td>
+                <td>{{ client.date_of_birth|date:'Y-m-d' }}</td>
+                <td>
+                    {% if client.approval_status == 'pending' %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    {% elif client.approval_status == 'approved' %}
+                        <span class="badge bg-success">Approved</span>
+                    {% elif client.approval_status == 'self-approved' %}
+                        <span class="badge bg-primary">Self Approved</span>
+                    {% elif client.approval_status == 'rejected' %}
+                        <span class="badge bg-danger">Rejected</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Unknown</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No clients found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

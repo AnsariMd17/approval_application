@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Approval System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'dashboard' %}">Approval System</a>
+            <!-- <ul class="navbar-nav ms-auto">
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="logout-link">Logout</a>
+                </li>
+                {% endif %}
+            </ul> -->
+        </div>
+    </nav>
+    {% block content %}{% endblock %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var logoutLink = document.getElementById('logout-link');
+            if (logoutLink) {
+                logoutLink.addEventListener('click', function (e) {
+                    e.preventDefault();
+
+                    // Get refresh token from storage (adjust if you use sessionStorage or cookies)
+                    var refresh = localStorage.getItem('refresh');
+                    var access = localStorage.getItem('access');
+
+                    if (refresh) {
+                        fetch('/api/logout/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + access
+                            },
+                            body: JSON.stringify({ refresh: refresh })
+                        })
+                        .finally(function () {
+                            localStorage.removeItem('access');
+                            localStorage.removeItem('refresh');
+                            window.location.href = "{% url 'admin_login' %}";
+                        });
+                    } else {
+                        localStorage.removeItem('access');
+                        localStorage.removeItem('refresh');
+                        window.location.href = "{% url 'admin_login' %}";
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
