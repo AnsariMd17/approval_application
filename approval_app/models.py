@@ -58,6 +58,8 @@ class Task(TimestampMixin):
     task_due_date = models.DateField(blank=True, null=True)
     task_completed_date = models.DateField(blank=True, null=True)
     approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='tasks', blank=True, null=True)
+    approval_status = models.CharField(max_length=255, null=True, blank=True)
+    category = models.ForeignKey('ApproversCategory', on_delete=models.CASCADE, related_name='approvers_category', blank=True, null=True)
 
     class Meta:
         db_table = 'approval_app_task'
@@ -66,29 +68,16 @@ class Task(TimestampMixin):
         return f"Task for {self.client_id.first_name} {self.client_id.last_name}: {self.task} ({self.task_status})"
     
 
-class StageOne(TimestampMixin):
-    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approverone')
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stageone')
-    task_status = models.CharField(max_length=255)
-
+class ApproversCategory(TimestampMixin):
+    """
+    Model to categorize approvers
+    """
+    category_name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True, null=True)
+    approvers = models.ManyToManyField(AdminUser, related_name='approvers_categories', blank=False, null=False)
     class Meta:
-        db_table = 'stage_one'
+        db_table = 'approval_app_approvers_category'
 
-class StageTwo(TimestampMixin):
-    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approvertwo')
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stagetwo')
-    task_status = models.CharField(max_length=255)
-
-    class Meta:
-        db_table = 'stage_two'
-
-class StageThree(TimestampMixin):
-    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approverthree')
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stagethree')
-    task_status = models.CharField(max_length=255)
-
-    class Meta:
-        db_table = 'stage_three'
-
-
+    def __str__(self):
+        return self.category_name
 
