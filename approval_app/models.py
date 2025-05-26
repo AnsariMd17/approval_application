@@ -67,7 +67,7 @@ class Task(TimestampMixin):
     
 
 class StageOne(TimestampMixin):
-    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approver')
+    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approverone')
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stageone')
     task_status = models.CharField(max_length=255)
 
@@ -75,7 +75,7 @@ class StageOne(TimestampMixin):
         db_table = 'stage_one'
 
 class StageTwo(TimestampMixin):
-    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approver')
+    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approvertwo')
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stagetwo')
     task_status = models.CharField(max_length=255)
 
@@ -83,7 +83,7 @@ class StageTwo(TimestampMixin):
         db_table = 'stage_two'
 
 class StageThree(TimestampMixin):
-    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approver')
+    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='approverthree')
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='stagethree')
     task_status = models.CharField(max_length=255)
 
