@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from .models import AdminUser, Client
+from .models import AdminUser, Client, Task, ApproversCategory
 from .forms import AdminUserForm, ClientForm
 from django.db.models import Q 
 from rest_framework.decorators import api_view, permission_classes
@@ -373,9 +373,8 @@ class ClientListDetailAPI(APIView):
 
 from rest_framework import generics
 class CategoryListCreate(generics.ListCreateAPIView):
-
     queryset = ApproversCategory.objects.all()
-    serializer = CategorySerializer
+    serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
 
 class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
@@ -383,3 +382,73 @@ class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'pk'
+
+
+class AdminListDetailAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, admin_id=None):
+        if admin_id is not None:
+            try:
+                admin = AdminUser.objects.get(id=admin_id)
+            except AdminUser.DoesNotExist:
+                return Response({"detail": "Admin not found."}, status=status.HTTP_404_NOT_FOUND)
+            serializer = AdminUserSerializer(admin)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            admins = AdminUser.objects.all().order_by('id')
+            paginator = PageNumberPagination()
+            paginator.page_size = 10
+            result_page = paginator.paginate_queryset(admins, request)
+            serializer = AdminUserSerializer(result_page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+
+class TaskListCreate(generics.ListCreateAPIView):
+    """
+    API view to retrieve list of tasks or create a new task.
+    """
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        data = self.request.data
+        
+        category_id = data.get('category', None)
+        category_instance = ApproversCategory.objects.get(id=category_id) if category_id else None
+        if not category_instance:
+            return Response({"detail": "Category id invalid"}, status=status.HTTP_404_NOT_FOUND)
+
+        is_approval_needed = data.get('is_approval_needed', False)
+        approval_status = data.get('approval_status', None)
+        
+        if category_id and category_instance:
+            if not is_approval_needed:
+                approval_status = 'Self-Approved'
+            else:
+                approval_status = 'Pending'
+       
+        serializer.save(approval_status=approval_status)
+
+class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+    """
+    API view to retrieve, update, or delete a task instance.
+    """
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        data = request.data.copy()
+        for field in ['approver', 'approval_status', 'is_approval_needed', 'approved_by']:
+            data.pop(field, None)
+       
+        partial = request.method == "PATCH"
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
