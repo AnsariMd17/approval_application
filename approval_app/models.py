@@ -18,9 +18,11 @@ class AdminUser(AbstractUser, TimestampMixin):
     phone_number = models.CharField(max_length=15, null=True, blank=True)
     is_approver = models.BooleanField(default=False)
     is_super_user = models.BooleanField(default=False)
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['first_name', 'last_name']
     
     # Override the default required fields
-    REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
+    #REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
     
     def __str__(self):
         if self.username:
