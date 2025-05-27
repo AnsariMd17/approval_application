@@ -397,8 +397,6 @@ class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = 'pk'
 
-<<<<<<< Updated upstream
-
 class AdminListDetailAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -511,7 +509,7 @@ class UpdateApprovalTaskView(APIView):
         return Response({
             'message': f'Task has been {task.approval_status.lower()}.',
             'task': serializer.data}, status=status.HTTP_200_OK)
-=======
+
 class SimpleTokenObtainPairView(TokenObtainPairView):
     serializer_class = SimpleTokenObtainPairSerializer
 
@@ -547,5 +545,3 @@ class SimpleTokenObtainPairView(TokenObtainPairView):
 
     #     return response
 
-
->>>>>>> Stashed changes
