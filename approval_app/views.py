@@ -484,11 +484,9 @@ class UpdateApprovalTaskView(APIView):
         
         if approval_status == "approve":
             task.approval_status = 'Approved'
-            task.approved_by = current_user_id
             task.approver = current_user_id
         elif approval_status == "reject":
             task.approval_status = 'Rejected'
-            task.approved_by = current_user_id
             task.approver = current_user_id
         else:
             return Response({'error': 'Invalid approval status.'}, status=status.HTTP_400_BAD_REQUEST)
