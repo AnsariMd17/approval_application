@@ -57,7 +57,7 @@ class Task(TimestampMixin):
     task_description = models.TextField(blank=True, null=True)
     task_due_date = models.DateField(blank=True, null=True)
     task_completed_date = models.DateField(blank=True, null=True)
-    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='tasks', blank=True, null=True)
+    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='tasks_approver', blank=True, null=True)
     approval_status = models.CharField(max_length=255, null=True, blank=True)
     category = models.OneToOneField(
         'ApproversCategory',
@@ -66,6 +66,8 @@ class Task(TimestampMixin):
         blank=True,
         null=True
     )
+    is_approval_needed = models.BooleanField(default=False)
+    approved_by = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='tasks_approved_by', blank=True, null=True)
 
     class Meta:
         db_table = 'approval_app_task'
