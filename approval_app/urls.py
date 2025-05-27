@@ -21,12 +21,9 @@ urlpatterns = [
     path('api/clients/<int:client_id>/', views.ClientListDetailAPI.as_view(), name='client-detail-api'),
     path('category/',views.CategoryListCreate.as_view(),name='approver-category'),
     path('category/<int:pk>/', CategoryRetrieveUpdateDestroy.as_view(), name='approver-category-detail'),
-<<<<<<< Updated upstream
     path('tasks/', TaskListCreate.as_view(), name='task-list-create'),
     path('tasks/<int:pk>/', TaskRetrieveUpdateDestroy.as_view(), name='task-detail'),
     # path('tasks/approve/<int:task_id>/', UpdateApprovalTaskView.as_view(), name='task-approve'),
-=======
     path('token/',SimpleTokenObtainPairView.as_view(),name='token-pair')
->>>>>>> Stashed changes
 ]
 

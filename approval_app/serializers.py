@@ -1,13 +1,9 @@
 from rest_framework import serializers
-<<<<<<< Updated upstream
-from .models import Client, AdminUser,ApproversCategory, Task
 
-=======
-from .models import Client, AdminUser,ApproversCategory
+from .models import Client, AdminUser,ApproversCategory, Task
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
->>>>>>> Stashed changes
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
@@ -23,13 +19,13 @@ class CategorySerializer(serializers.ModelSerializer):
         model = ApproversCategory
         fields = "__all__"
 
-<<<<<<< Updated upstream
+
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = "__all__"
         read_only_fields = ['approver', 'approval_status', 'is_approval_needed', 'approved_by']
-=======
+
 class SimpleTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = 'email'
     
@@ -51,4 +47,4 @@ class SimpleTokenObtainPairSerializer(TokenObtainPairSerializer):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
->>>>>>> Stashed changes
+
