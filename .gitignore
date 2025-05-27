@@ -22,6 +22,7 @@ local_settings.py
 # Ignore IDE files
 .vscode/
 *.pyc
+.pyc
 
 .env
 debug.log

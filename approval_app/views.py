@@ -16,6 +16,9 @@ from rest_framework import status, permissions
 from .serializers import *
 from .models import *
 
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
 
 def is_admin(user):
     return user.is_authenticated and user.is_super_user and user.is_approver
@@ -149,6 +152,10 @@ def delete_admin_user(request, user_id):
 
 from django.contrib.auth import authenticate, login, logout
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
+@csrf_exempt
 def admin_login(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -209,7 +216,14 @@ class LogoutView(APIView):
         except TokenError:
             return Response({"detail": "Token is invalid or expired."}, status=status.HTTP_400_BAD_REQUEST)
         
+        # user = request.user
 
+        # refresh_token = request.data.get("refresh")
+        # if refresh_token:
+        #     token = RefreshToken(refresh_token)
+        #     token.blacklist()
+        
+        # return Response({"detail": "Logged out successfully."}, status=status.HTTP_200_OK)
 class EditClientAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -383,6 +397,7 @@ class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = 'pk'
 
+<<<<<<< Updated upstream
 
 class AdminListDetailAPI(APIView):
     permission_classes = [IsAuthenticated]
@@ -498,3 +513,41 @@ class UpdateApprovalTaskView(APIView):
         return Response({
             'message': f'Task has been {task.approval_status.lower()}.',
             'task': serializer.data}, status=status.HTTP_200_OK)
+=======
+class SimpleTokenObtainPairView(TokenObtainPairView):
+    serializer_class = SimpleTokenObtainPairSerializer
+
+    # def post(self, request, *args, **kwargs):
+    #     serializer = self.serializer_class(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     tokens = serializer.validated_data
+
+    #     response = Response(
+    #         {"message": "Login successful"},
+    #         status=status.HTTP_200_OK
+    #     )
+
+    #     # Store access token in cookie (can be JS-readable or HttpOnly)
+    #     response.set_cookie(
+    #         key='access_token',
+    #         value=tokens['access'],
+    #         httponly=False,  # set to True if you want HttpOnly
+    #         secure=True,
+    #         samesite='Lax',
+    #         max_age=5 * 60  # 5 minutes
+    #     )
+
+    #     # Store refresh token in HttpOnly cookie (secure)
+    #     response.set_cookie(
+    #         key='refresh_token',
+    #         value=tokens['refresh'],
+    #         httponly=True,
+    #         secure=True,
+    #         samesite='Lax',
+    #         max_age=7 * 24 * 60 * 60  # 7 days
+    #     )
+
+    #     return response
+
+
+>>>>>>> Stashed changes
