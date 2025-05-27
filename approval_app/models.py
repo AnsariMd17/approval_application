@@ -1,6 +1,7 @@
 from django.db import models
 from approval_system.utils import PhoneNumberField
 from approval_system.mixins import TimestampMixin
+from approval_system import settings
 
 # Create your models here.
 from django.contrib.auth.models import AbstractUser
@@ -67,13 +68,29 @@ class Task(TimestampMixin):
         null=True
     )
     is_approval_needed = models.BooleanField(default=False)
-    approved_by = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='tasks_approved_by', blank=True, null=True)
-
+    approver = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='client_task_approvers',
+        through='TaskApprover',
+        through_fields=('Task', 'approver'),
+        blank=True
+    )
     class Meta:
         db_table = 'approval_app_task'
 
     def __str__(self):
         return f"Task for {self.client_id.first_name} {self.client_id.last_name}: {self.task} ({self.task_status})"
+    
+class TaskApprover(TimestampMixin):
+    Task = models.ForeignKey('Task', on_delete=models.CASCADE)
+    approver = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='task_approver_set')
+    is_approved_status = models.CharField(max_length=255,null=True,blank=True)
+
+    def __str__(self):
+        return f"Approver {self.approver} for Task {self.Task}"
+
+    class Meta:
+        db_table = 'task_approvers'
     
 
 class ApproversCategory(TimestampMixin):
