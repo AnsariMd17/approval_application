@@ -13,7 +13,8 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from .serializers import ClientSerializer, AdminUserSerializer
+from .serializers import *
+from .models import *
 
 
 def is_admin(user):
@@ -43,27 +44,79 @@ def dashboard(request):
     }
     return render(request, 'approval_app/dashboard.html', context)
 
+@login_required
+def admin_user_list(request):
+    admin_users = AdminUser.objects.order_by('-created_at')
+    search = request.GET.get('search')
+    if search:
+        admin_users = admin_users.filter(
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) |
+            Q(email__icontains=search) |
+            Q(username__icontains=search)
+        )
+    paginator = Paginator(admin_users, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'approval_app/admin_user_list.html', {
+        'page_obj': page_obj,
+        'search': search
+    })
 
-from .models import AdminUser
+@login_required
+def client_list(request):
+    clients = Client.objects.order_by('-created_at')
+    search = request.GET.get('search')
+    if search:
+        clients = clients.filter(
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) |
+            Q(program__icontains=search) |
+            Q(mobile_number__icontains=search)
+        )
+    program_filter = request.GET.get('program')
+    if program_filter:
+        clients = clients.filter(program__icontains=program_filter)
+    paginator = Paginator(clients, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    programs = Client.objects.values_list('program', flat=True).distinct().order_by('program')
+    return render(request, 'approval_app/client_list.html', {
+        'page_obj': page_obj,
+        'search': search,
+        'programs': programs,
+        'program_filter': program_filter
+    })
 
-class AdminListDetailAPI(APIView):
-    permission_classes = [IsAuthenticated]
+@login_required
+def add_admin_user(request):
+    """Add new admin user"""
+    if request.method == 'POST':
+        form = AdminUserForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Admin user added successfully!')
+            return redirect('admin_user_list')
+    else:
+        form = AdminUserForm()
+    
+    return render(request, 'approval_app/add_admin_user.html', {'form': form})
 
-    def get(self, request, admin_id=None):
-        if admin_id is not None:
-            try:
-                admin = AdminUser.objects.get(id=admin_id)
-            except AdminUser.DoesNotExist:
-                return Response({"detail": "Admin not found."}, status=status.HTTP_404_NOT_FOUND)
-            serializer = AdminUserSerializer(admin)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            admins = AdminUser.objects.all().order_by('id')
-            paginator = PageNumberPagination()
-            paginator.page_size = 10
-            result_page = paginator.paginate_queryset(admins, request)
-            serializer = AdminUserSerializer(result_page, many=True)
-            return paginator.get_paginated_response(serializer.data)
+@login_required
+def edit_admin_user(request, user_id):
+    """Edit admin user"""
+    user = get_object_or_404(AdminUser, id=user_id)
+    
+    if request.method == 'POST':
+        form = AdminUserForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Admin user updated successfully!')
+            return redirect('admin_user_list')
+    else:
+        form = AdminUserForm(instance=user)
+    
+    return render(request, 'approval_app/edit_admin_user.html', {'form': form, 'user': user})
 
 
 class AddClientAPI(APIView):
@@ -75,6 +128,23 @@ class AddClientAPI(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@login_required
+def delete_admin_user(request, user_id):
+    """Delete admin user"""
+    user = get_object_or_404(AdminUser, id=user_id)
+    if request.method == 'POST':
+        user.delete()
+        messages.success(request, 'Admin user deleted successfully!')
+        return redirect('admin_user_list')
+    return render(request, 'approval_app/confirm_delete.html', {
+        'object': user,
+        'object_type': 'Admin User',
+        'cancel_url': 'admin_user_list'
+    })
+
+
 
 
 from django.contrib.auth import authenticate, login, logout
@@ -301,97 +371,15 @@ class ClientListDetailAPI(APIView):
 #         form = ClientApprovalForm(instance=client)
 #     return render(request, 'approval_app/approve_client.html', {'form': form, 'client': client})
 
+from rest_framework import generics
+class CategoryListCreate(generics.ListCreateAPIView):
 
+    queryset = ApproversCategory.objects.all()
+    serializer = CategorySerializer
+    permission_classes = [IsAuthenticated]
 
-
-# @login_required
-# def admin_user_list(request):
-#     admin_users = AdminUser.objects.order_by('-created_at')
-#     search = request.GET.get('search')
-#     if search:
-#         admin_users = admin_users.filter(
-#             Q(first_name__icontains=search) |
-#             Q(last_name__icontains=search) |
-#             Q(email__icontains=search) |
-#             Q(username__icontains=search)
-#         )
-#     paginator = Paginator(admin_users, 10)
-#     page_number = request.GET.get('page')
-#     page_obj = paginator.get_page(page_number)
-#     return render(request, 'approval_app/admin_user_list.html', {
-#         'page_obj': page_obj,
-#         'search': search
-#     })
-
-
-
-# @login_required
-# def client_list(request):
-#     clients = Client.objects.order_by('-created_at')
-#     search = request.GET.get('search')
-#     if search:
-#         clients = clients.filter(
-#             Q(first_name__icontains=search) |
-#             Q(last_name__icontains=search) |
-#             Q(program__icontains=search) |
-#             Q(mobile_number__icontains=search)
-#         )
-#     program_filter = request.GET.get('program')
-#     if program_filter:
-#         clients = clients.filter(program__icontains=program_filter)
-#     paginator = Paginator(clients, 10)
-#     page_number = request.GET.get('page')
-#     page_obj = paginator.get_page(page_number)
-#     programs = Client.objects.values_list('program', flat=True).distinct().order_by('program')
-#     return render(request, 'approval_app/client_list.html', {
-#         'page_obj': page_obj,
-#         'search': search,
-#         'programs': programs,
-#         'program_filter': program_filter
-#     })
-
-# @login_required
-# def add_admin_user(request):
-#     """Add new admin user"""
-#     if request.method == 'POST':
-#         form = AdminUserForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, 'Admin user added successfully!')
-#             return redirect('admin_user_list')
-#     else:
-#         form = AdminUserForm()
-    
-#     return render(request, 'approval_app/add_admin_user.html', {'form': form})
-
-
-# @login_required
-# def edit_admin_user(request, user_id):
-#     """Edit admin user"""
-#     user = get_object_or_404(AdminUser, id=user_id)
-    
-#     if request.method == 'POST':
-#         form = AdminUserForm(request.POST, instance=user)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, 'Admin user updated successfully!')
-#             return redirect('admin_user_list')
-#     else:
-#         form = AdminUserForm(instance=user)
-    
-#     return render(request, 'approval_app/edit_admin_user.html', {'form': form, 'user': user})
-
-
-# @login_required
-# def delete_admin_user(request, user_id):
-#     """Delete admin user"""
-#     user = get_object_or_404(AdminUser, id=user_id)
-#     if request.method == 'POST':
-#         user.delete()
-#         messages.success(request, 'Admin user deleted successfully!')
-#         return redirect('admin_user_list')
-#     return render(request, 'approval_app/confirm_delete.html', {
-#         'object': user,
-#         'object_type': 'Admin User',
-#         'cancel_url': 'admin_user_list'
-#     })
+class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ApproversCategory.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'
