@@ -5,8 +5,8 @@ from .views import *
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
-    #path('admin-users/', views.AdminListDetailAPI.as_view(), name='admin_user_list'),
-    #path('admin-users/<int:admin_id>/', views.AdminListDetailAPI.as_view(), name='admin_user_list'),
+    path('admin-users/', views.AdminListDetailAPI.as_view(), name='admin_user_list'),
+    path('admin-users/<int:admin_id>/', views.AdminListDetailAPI.as_view(), name='admin_user_list'),
     # path('clients/', views.client_list, name='client_list'),
     # path('add-admin-user/', views.add_admin_user, name='add_admin_user'),
     # path('edit-admin-user/<int:user_id>/', views.edit_admin_user, name='edit_admin_user'),
@@ -21,5 +21,7 @@ urlpatterns = [
     path('api/clients/<int:client_id>/', views.ClientListDetailAPI.as_view(), name='client-detail-api'),
     path('category/',views.CategoryListCreate.as_view(),name='approver-category'),
     path('category/<int:pk>/', CategoryRetrieveUpdateDestroy.as_view(), name='approver-category-detail'),
+    path('tasks/', TaskListCreate.as_view(), name='task-list-create'),
+    path('tasks/<int:pk>/', TaskRetrieveUpdateDestroy.as_view(), name='task-detail'),
 ]
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Client, AdminUser,ApproversCategory
+from .models import Client, AdminUser,ApproversCategory, Task
 
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,5 +13,11 @@ class AdminUserSerializer(serializers.ModelSerializer):
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
-        meta = ApproversCategory
+        model = ApproversCategory
         fields = "__all__"
+
+class TaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = "__all__"
+        read_only_fields = ['approver', 'approval_status', 'is_approval_needed', 'approved_by']
