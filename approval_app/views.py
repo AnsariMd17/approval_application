@@ -614,22 +614,27 @@ class UpdateApprovalTaskView(APIView):
         try:
             client = Client.objects.get(id=client_id)
             task = Task.objects.get(id=task_id, client_id=client)
+            task_approver = TaskApprover.objects.get(Task=task, approver=current_user_id)
         except Client.DoesNotExist:
             return Response({'error': 'Client not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Task.DoesNotExist:
             return Response({'error': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except TaskApprover.DoesNotExist:
+            return Response({'error': 'Invalid approver for this task'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': 'An unexpected error occurred. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        if task.approval_status in ['Approved', 'Rejected']:
-            return Response({'error': f'This task has already been {task.approval_status.lower()}.'}, status=status.HTTP_400_BAD_REQUEST)
+        if task.approval_status in ['Approved']:
+            return Response({'error': f'This task has already been Approved'}, status=status.HTTP_400_BAD_REQUEST)
         
         if approval_status == "approve":
             task.approval_status = 'Approved'
-            task.approver = current_user_id
+            task_approver.is_approved_status = 'Approved'
+            task_approver.save()
         elif approval_status == "reject":
             task.approval_status = 'Rejected'
-            task.approver = current_user_id
+            task_approver.is_approved_status = 'Rejected'
+            task_approver.save()
         else:
             return Response({'error': 'Invalid approval status.'}, status=status.HTTP_400_BAD_REQUEST)
 

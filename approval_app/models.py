@@ -61,7 +61,7 @@ class Task(TimestampMixin):
     task_due_date = models.DateField(blank=True, null=True)
     task_completed_date = models.DateField(blank=True, null=True)
     approval_status = models.CharField(max_length=255, null=True, blank=True)
-    category = models.OneToOneField(
+    category = models.ForeignKey(
         'ApproversCategory',
         on_delete=models.CASCADE,
         related_name='approvers_category',
