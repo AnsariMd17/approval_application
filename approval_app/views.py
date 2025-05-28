@@ -201,16 +201,42 @@ def admin_logout(request):
 
 
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-
+from rest_framework_simplejwt.tokens import AccessToken
+from datetime import datetime
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 class LogoutView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
         try:
+            user = request.user
+            token_value = request.META.get('HTTP_AUTHORIZATION').split('Bearer')[-1]
             refresh_token = request.data["refresh"]
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response({"detail": "Logout successful."}, status=status.HTTP_205_RESET_CONTENT)
+
+            if not token_value or token_value is None:
+                return Response({"error: token cannot be empty"},status = status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                token = AccessToken(token_value)
+                jti = token['jti']
+                exp_timestamp = token['exp']
+                expires_at = datetime.fromtimestamp(exp_timestamp)
+            except Exception as e:
+                return Response({"error": f"Invalid token format: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+           
+            token_object = OutstandingToken()
+            token_object.jti = jti
+            token_object.token = str(token_value)
+            token_object.user_id = request.user.id
+            token_object.expires_at = expires_at
+            token_object.save()
+            
+            blacklist_token = BlacklistedToken(token=token_object)
+            blacklist_token.save()
+
+            return Response({"detail": "Logout successful."}, status=status.HTTP_200_OK)
         except KeyError:
             return Response({"detail": "Refresh token not provided."}, status=status.HTTP_400_BAD_REQUEST)
         except TokenError:
@@ -544,4 +570,3 @@ class SimpleTokenObtainPairView(TokenObtainPairView):
     #     )
 
     #     return response
-
