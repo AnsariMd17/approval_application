@@ -154,14 +154,3 @@ SIMPLE_JWT = {
 
 AUTH_USER_MODEL = 'approval_app.AdminUser'
 
-# SEND_GRID_API_KEY = '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'
-
-# SENDGRID_FROM_EMAIL = 'sendgrid@dataterrain.com'
-SENDGRID_SANDBOX_MODE_IN_DEBUG = True
-SENDGRID_EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
-SENDGRID_EMAIL_HOST = 'smtp.sendgrid.net'
-SENDGRID_EMAIL_HOST_USER = 'apikey'
-SENDGRID_EMAIL_PORT = 587
-SENDGRID_EMAIL_USE_TLS = True
-SENDGRID_RECEIVER_MAIL = ''
-SENDGRID_TOKEN_EXPIRATION = 31536000  # 1 year (31,536,000 seconds)

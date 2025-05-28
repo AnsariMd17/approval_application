@@ -19,21 +19,21 @@ class PhoneNumberField(models.CharField):
         return super().get_prep_value(value)
     
 
-def send_mail(to_email, subject, content):
-    sg = SendGridAPIClient(api_key=settings.SEND_GRID_API_KEY)
-    from_email = settings.SENDGRID_DEFAULT_FROM_EMAIL
+# def send_mail(to_email, subject, content):
+#     sg = SendGridAPIClient(api_key=settings.SEND_GRID_API_KEY)
+#     from_email = settings.SENDGRID_DEFAULT_FROM_EMAIL
 
-    message = Mail(
-        from_email=from_email,
-        to_emails=to_email,
-        subject=subject,
-        html_content=content
-    )
+#     message = Mail(
+#         from_email=from_email,
+#         to_emails=to_email,
+#         subject=subject,
+#         html_content=content
+#     )
 
-    try:
-        response = sg.send(message)
-        print(f"Email has been sent successfully! Response: {response.status_code}")
-    except Exception as e:
-        err = json.loads(e.body.decode("utf-8"))
-        return False, err
-    return True, {}
+#     try:
+#         response = sg.send(message)
+#         print(f"Email has been sent successfully! Response: {response.status_code}")
+#     except Exception as e:
+#         err = json.loads(e.body.decode("utf-8"))
+#         return False, err
+#     return True, {}
