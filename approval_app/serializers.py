@@ -4,6 +4,16 @@ from .models import Client, AdminUser,ApproversCategory, Task
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
+
+
+from .models import Client, AdminUser,ApproversCategory, Task
+
+from .models import Client, AdminUser,ApproversCategory
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
+from rest_framework.exceptions import AuthenticationFailed
+
+
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Client
@@ -18,13 +28,6 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ApproversCategory
         fields = "__all__"
-
-
-# class TaskSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Task
-#         fields = "__all__"
-#         read_only_fields = ['approver', 'approval_status', 'is_approval_needed', 'approved_by']
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
