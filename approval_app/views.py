@@ -554,6 +554,8 @@ class TaskListCreate(generics.ListCreateAPIView):
 class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     """
     API view to retrieve, update, or delete a task instance.
+    Only allows editing of selected fields.
+    Creates a task history record if approval_status is rejected.
     """
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
@@ -562,15 +564,35 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        
-        data = request.data.copy()
-        for field in ['approver', 'approval_status', 'is_approval_needed', 'approved_by']:
-            data.pop(field, None)
-       
+
+        # Extract and restrict data to only allowed fields
+        allowed_fields = [
+            'client_id', 'task', 'task_status',
+            'task_description', 'task_due_date', 'task_completed_date'
+        ]
+        data = {
+            field: value for field, value in request.data.items()
+            if field in allowed_fields
+        }
+
         partial = request.method == "PATCH"
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+
+        # Re-fetch the updated instance
+        updated_instance = self.get_object()
+
+        # Create TaskHistory record if approval_status is "rejected"
+        if updated_instance.approval_status.lower() == "rejected":
+            TaskHistory.objects.create(
+                task=updated_instance,
+                approval_status=updated_instance.approval_status,
+                task_status=updated_instance.task_status,
+                created_by=request.user,
+                created_at=timezone.now()
+            )
+
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 from rest_framework.views import APIView
