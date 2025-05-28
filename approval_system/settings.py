@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from django.conf import settings
+from decouple import config
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'approval_app',
     'rest_framework_simplejwt.token_blacklist',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -83,9 +87,9 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'approval_db',        # your database name
         'USER': 'postgres',      # your database user
-        'PASSWORD': 'password123',  # your database user's password
+        'PASSWORD': 'Data@123',  # your database user's password
         'HOST': 'localhost',          # usually 'localhost'
-        'PORT': '5432',               # default PostgreSQL port
+        'PORT': '5433',               # default PostgreSQL port
     }
 }
 
@@ -151,3 +155,19 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': False,
 
 }
+
+AUTH_USER_MODEL = 'approval_app.AdminUser'
+
+
+SENDGRID_SANDBOX_MODE_IN_DEBUG = True
+SENDGRID_EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
+SENDGRID_EMAIL_HOST = 'smtp.sendgrid.net'
+SENDGRID_EMAIL_HOST_USER = 'apikey'
+SENDGRID_EMAIL_PORT = 587
+SENDGRID_EMAIL_USE_TLS = True
+SENDGRID_RECEIVER_MAIL = ''
+SENDGRID_TOKEN_EXPIRATION = 31536000  # 1 year (31,536,000 seconds)
+
+
+SEND_GRID_API_KEY = config('SEND_GRID_API_KEY')
+SENDGRID_DEFAULT_FROM_EMAIL = config('SENDGRID_FROM_EMAIL')
