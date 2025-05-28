@@ -87,9 +87,9 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'approval_db',        # your database name
         'USER': 'postgres',      # your database user
-        'PASSWORD': 'Data@123',  # your database user's password
+        'PASSWORD': 'password123',  # your database user's password
         'HOST': 'localhost',          # usually 'localhost'
-        'PORT': '5433',               # default PostgreSQL port
+        'PORT': '5432',               # default PostgreSQL port
     }
 }
 
@@ -171,3 +171,27 @@ SENDGRID_TOKEN_EXPIRATION = 31536000  # 1 year (31,536,000 seconds)
 
 SEND_GRID_API_KEY = config('SEND_GRID_API_KEY')
 SENDGRID_DEFAULT_FROM_EMAIL = config('SENDGRID_FROM_EMAIL')
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Your React app's URL
+]
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
