@@ -20,11 +20,32 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+# class TaskSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Task
+#         fields = "__all__"
+#         read_only_fields = ['approver', 'approval_status', 'is_approval_needed', 'approved_by']
+
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = "__all__"
-        read_only_fields = ['approver', 'approval_status', 'is_approval_needed', 'approved_by']
+        fields = [
+            'id', 'client_id', 'task', 'task_status', 'task_description', 
+            'task_due_date', 'task_completed_date', 'is_approval_needed', 
+            'category', 'approval_status', 'approver', 'created_at'
+        ]
+        read_only_fields = ['id', 'approver', 'approval_status', 'created_at', 'changed_at']
+
+class TaskCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer specifically for task creation with limited fields
+    """
+    class Meta:
+        model = Task
+        fields = [
+            'client_id', 'task', 'task_status', 'task_description', 
+            'task_due_date', 'task_completed_date', 'is_approval_needed', 'category'
+        ]
 
 class SimpleTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = 'email'
