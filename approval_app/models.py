@@ -60,7 +60,6 @@ class Task(TimestampMixin):
     task_description = models.TextField(blank=True, null=True)
     task_due_date = models.DateField(blank=True, null=True)
     task_completed_date = models.DateField(blank=True, null=True)
-    approver = models.ForeignKey(AdminUser, on_delete=models.CASCADE, related_name='tasks_approver', blank=True, null=True)
     approval_status = models.CharField(max_length=255, null=True, blank=True)
     category = models.OneToOneField(
         'ApproversCategory',
@@ -108,3 +107,29 @@ class ApproversCategory(TimestampMixin):
     def __str__(self):
         return self.category_name
 
+class TaskHistory(TimestampMixin):
+    """
+    Model to track task history and changes
+    """
+    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='task_histories')
+    approval_status = models.CharField(max_length=255, choices=[
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('resubmitted', 'Resubmitted'),
+        ('self-approved', 'Self-Approved'),
+    ])
+    task_status = models.CharField(max_length=50, choices=[
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('incomplete', 'Incomplete'),
+    ])
+    
+    class Meta:
+        db_table = 'task_history'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Task {self.task.id} - {self.approval_status} (Status: {self.task_status})"

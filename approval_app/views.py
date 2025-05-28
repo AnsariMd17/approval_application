@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 
+from django.utils import timezone
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -18,6 +19,18 @@ from .models import *
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+def create_task_history(task, approval_status, task_status, created_by_user):
+    """
+    Helper function to create task history entries
+    """
+    TaskHistory.objects.create(
+        task=task,
+        approval_status=approval_status,
+        task_status=task_status,
+        created_by=created_by_user,
+        changed_by=created_by_user
+    )
 
 
 def is_admin(user):
@@ -416,33 +429,101 @@ class AdminListDetailAPI(APIView):
             serializer = AdminUserSerializer(result_page, many=True)
             return paginator.get_paginated_response(serializer.data)
 
-
+from django.db import transaction
 class TaskListCreate(generics.ListCreateAPIView):
     """
     API view to retrieve list of tasks or create a new task.
     """
     queryset = Task.objects.all()
-    serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        data = self.request.data
-        
-        category_id = data.get('category', None)
-        category_instance = ApproversCategory.objects.get(id=category_id) if category_id else None
-        if not category_instance:
-            return Response({"detail": "Category id invalid"}, status=status.HTTP_404_NOT_FOUND)
+    def get_serializer_class(self):
+        """
+        Return appropriate serializer based on request method
+        """
+        if self.request.method == 'POST':
+            return TaskCreateSerializer
+        else:
+            return TaskSerializer
 
-        is_approval_needed = data.get('is_approval_needed', False)
-        approval_status = data.get('approval_status', None)
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        """
+        Custom create method to handle task creation with approval logic
+        """
         
-        if category_id and category_instance:
-            if not is_approval_needed:
-                approval_status = 'Self-Approved'
-            else:
-                approval_status = 'Pending'
-       
-        serializer.save(approval_status=approval_status)
+        serializer = TaskCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        validated_data = serializer.validated_data
+        
+        category_id = validated_data.get('category')
+        if not category_id:
+            return Response(
+                {"detail": "Category ID is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            category_instance = ApproversCategory.objects.get(id=category_id.id)
+        except ApproversCategory.DoesNotExist:
+            return Response(
+                {"detail": "Category not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        is_approval_needed = validated_data.get('is_approval_needed', False)
+        if is_approval_needed:
+            approval_status = 'Pending'
+        else:
+            approval_status = 'Self-Approved'
+        
+        task = Task.objects.create(
+            client_id=validated_data['client_id'],
+            task=validated_data['task'],
+            task_status=validated_data.get('task_status', 'pending'),
+            task_description=validated_data.get('task_description', ''),
+            task_due_date=validated_data.get('task_due_date'),
+            task_completed_date=validated_data.get('task_completed_date'),
+            is_approval_needed=is_approval_needed,
+            category=category_instance,
+            approval_status=approval_status,
+            created_by=request.user,
+            created_at = timezone.now()
+        )
+        
+        if is_approval_needed:
+            category_approvers = category_instance.approvers.all()
+            
+            if not category_approvers.exists():
+                return Response(
+                    {"detail": "No approvers found for the selected category"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            task_approvers = []
+            for approver in category_approvers:
+                task_approver = TaskApprover(
+                    Task=task,
+                    approver=approver,
+                    is_approved_status='Pending',
+                    created_by=request.user,
+                    created_at = timezone.now()
+                )
+                task_approvers.append(task_approver)
+            
+            TaskApprover.objects.bulk_create(task_approvers)
+        
+        create_task_history(
+            task=task,
+            approval_status=approval_status.lower(), 
+            task_status=task.task_status,
+            created_by_user=request.user
+        )
+        
+        response_serializer = TaskSerializer(task)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     """
