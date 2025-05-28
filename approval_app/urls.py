@@ -23,7 +23,7 @@ urlpatterns = [
     path('category/<int:pk>/', CategoryRetrieveUpdateDestroy.as_view(), name='approver-category-detail'),
     path('tasks/', TaskListCreate.as_view(), name='task-list-create'),
     path('tasks/<int:pk>/', TaskRetrieveUpdateDestroy.as_view(), name='task-detail'),
-    # path('tasks/approve/<int:task_id>/', UpdateApprovalTaskView.as_view(), name='task-approve'),
+    path('tasks/approve/<int:task_id>/', UpdateApprovalTaskView.as_view(), name='task-approve'),
     path('token/',SimpleTokenObtainPairView.as_view(),name='token-pair')
 ]
 
