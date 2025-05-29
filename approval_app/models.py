@@ -74,7 +74,8 @@ class Task(TimestampMixin):
         related_name='client_task_approvers',
         through='TaskApprover',
         through_fields=('Task', 'approver'),
-        blank=True
+        blank=True,
+        null=True
     )
     class Meta:
         db_table = 'approval_app_task'
