@@ -19,6 +19,7 @@ from .models import *
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from notifications.models import *
 
 def create_task_history(task, approval_status, task_status, created_by_user):
     """
@@ -168,26 +169,33 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
-@csrf_exempt
-def admin_login(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None and user.is_active:
-            # Only allow admins (not clients)
-            if user.is_approver or user.is_super_user:
-                login(request, user)
-                # JWT token generation
-                refresh = RefreshToken.for_user(user)
-                response = redirect('dashboard')
-                response.set_cookie('jwt', str(refresh.access_token), httponly=True)
-                return response
-            else:
-                messages.error(request, 'You are not authorized to login here.')
-        else:
-            messages.error(request, 'Invalid username or password.')
-    return render(request, 'approval_app/login.html')
+# @csrf_exempt
+# def admin_login(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#         user = authenticate(request, username=username, password=password)
+#         if user is not None and user.is_active:
+#             # Only allow admins (not clients)
+#             if user.is_approver or user.is_super_user:
+#                 login(request, user)
+#                 # JWT token generation
+#                 refresh = RefreshToken.for_user(user)
+#                 response = redirect('dashboard')
+#                 response.set_cookie('jwt', str(refresh.access_token), httponly=True)
+#                 return response
+#             else:
+#                 messages.error(request, 'You are not authorized to login here.')
+#         else:
+#             messages.error(request, 'Invalid username or password.')
+#     return render(request, 'approval_app/login.html')
+
+# @login_required
+# def admin_logout(request):
+#     logout(request)
+#     response = redirect('admin_login')
+#     response.delete_cookie('jwt')
+#     return response
 
 def admin_signup(request):
     if request.method == 'POST':
@@ -203,15 +211,6 @@ def admin_signup(request):
     else:
         form = AdminUserForm()
     return render(request, 'approval_app/sign_up.html', {'form': form})
-
-@login_required
-def admin_logout(request):
-    logout(request)
-    response = redirect('admin_login')
-    response.delete_cookie('jwt')
-    return response
-
-
 
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.tokens import AccessToken
@@ -632,6 +631,9 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 
         # Create TaskHistory record if approval_status is "rejected"
         if updated_instance.approval_status.lower() == "rejected":
+            updated_instance.approval_status = "resubmitted"
+            updated_instance.save()
+
             TaskHistory.objects.create(
                 task=updated_instance,
                 approval_status=updated_instance.approval_status,
@@ -640,6 +642,24 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
                 created_at=timezone.now()
             )
 
+            approvers = updated_instance.approver.all()
+            for approver in approvers:
+                message = f"Task '{updated_instance.task}' has been resubmitted and needs your approval."
+                redirect_url = f"/tasks/{task.id}?mode=approve"
+
+                create_notification(
+                    message=message,
+                    redirect_url=redirect_url,
+                    recipient_id=approver.id,
+                    created_by=request.user
+                )
+            create_task_history(
+            task=task,
+            approval_status=approval_status.lower(), 
+            task_status=task.task_status,
+            created_by_user=request.user
+        )
+                
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 from rest_framework.views import APIView
