@@ -74,8 +74,8 @@ class Task(TimestampMixin):
         related_name='client_task_approvers',
         through='TaskApprover',
         through_fields=('Task', 'approver'),
-        blank=True,
-        null=True
+        blank=True
+       
     )
     class Meta:
         db_table = 'approval_app_task'
@@ -101,7 +101,7 @@ class ApproversCategory(TimestampMixin):
     """
     category_name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True, null=True)
-    approvers = models.ManyToManyField(AdminUser, related_name='approvers_categories', blank=False, null=False)
+    approvers = models.ManyToManyField(AdminUser, related_name='approvers_categories', blank=True, null=True)
     class Meta:
         db_table = 'approval_app_approvers_category'
 
