@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Client, AdminUser,ApproversCategory, Task
+from .models import Client, AdminUser,ApproversCategory, Task, TaskHistory
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
@@ -51,14 +51,19 @@ class CategorySerializer(serializers.ModelSerializer):
 #         read_only_fields = ['approver', 'approval_status', 'is_approval_needed', 'approved_by']
 
 class TaskSerializer(serializers.ModelSerializer):
+    task_history = serializers.SerializerMethodField()
     class Meta:
         model = Task
         fields = [
             'id', 'client_id', 'task', 'task_status', 'task_description', 
             'task_due_date', 'task_completed_date', 'is_approval_needed', 
-            'category', 'approval_status', 'approver', 'created_at'
+            'category', 'approval_status', 'approver', 'created_at', 'task_history'
         ]
         read_only_fields = ['id', 'approver', 'approval_status', 'created_at', 'changed_at']
+
+    def get_task_history(self, obj):
+        history_records = TaskHistory.objects.filter(task=obj).order_by('-created_at')
+        return TaskHistorySerializer(history_records, many=True).data
 
 class TaskCreateSerializer(serializers.ModelSerializer):
     """
@@ -93,3 +98,13 @@ class SimpleTokenObtainPairSerializer(TokenObtainPairSerializer):
             'access': str(refresh.access_token),
         }
 
+class TaskHistorySerializer(serializers.ModelSerializer):
+    """
+    Serializer for TaskHistory model
+    """
+    class Meta:
+        model = TaskHistory
+        fields = [
+            'id', 'approval_status', 'task_status', 'created_by', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at']

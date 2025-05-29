@@ -690,6 +690,9 @@ class UpdateApprovalTaskView(APIView):
         if task.approval_status in ['Approved']:
             return Response({'error': f'This task has already been Approved'}, status=status.HTTP_400_BAD_REQUEST)
         
+        approvers_for_tasks = TaskApprover.objects.filter(Task=task).exclude(approver__isnull=True)
+        all_approver_ids = [ta.approver.id for ta in approvers_for_tasks if ta.approver]
+
         if approval_status == "approve":
             task.approval_status = 'Approved'
             task_approver.is_approved_status = 'Approved'
@@ -700,12 +703,13 @@ class UpdateApprovalTaskView(APIView):
             redirect_url = f"/tasks/view/{task.id}/"
             
             # Send notification to the task creator
-            create_notification(
-                message=message,
-                redirect_url=redirect_url,
-                recipient_id=task.created_by.id,
-                created_by=request.user
-            )
+            for approver_id in all_approver_ids:
+                create_notification(
+                    message=message,
+                    redirect_url=redirect_url,
+                    recipient_id=approver_id,
+                    created_by=request.user
+                )
             
             # Create task history entry for approval
             create_task_history(
@@ -726,12 +730,13 @@ class UpdateApprovalTaskView(APIView):
             redirect_url = f"/tasks/edit/{task.id}/"
             
             # Send notification to the task creator
-            create_notification(
-                message=message,
-                redirect_url=redirect_url,
-                recipient_id=task.created_by.id,
-                created_by=request.user
-            )
+            for approver_id in all_approver_ids:
+                create_notification(
+                    message=message,
+                    redirect_url=redirect_url,
+                    recipient_id=approver_id,
+                    created_by=request.user
+                )
             
             # Create task history entry for rejection
             create_task_history(
