@@ -15,6 +15,12 @@ class AdminUserSerializer(serializers.ModelSerializer):
         exclude = [ 'password', 'last_login', 'is_superuser', 'changed_by', 'created_by', 'created_at', 'changed_at' ]
 
 class CategorySerializer(serializers.ModelSerializer):
+    approvers = serializers.PrimaryKeyRelatedField(
+        queryset=AdminUser.objects.all(),
+        many=True,
+        required=False,
+        allow_null=True
+    )
     class Meta:
         model = ApproversCategory
         fields = "__all__"

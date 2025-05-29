@@ -8,7 +8,7 @@ from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
-
+from notifications.views import create_notification
 from django.utils import timezone
 
 from rest_framework.views import APIView
@@ -429,6 +429,41 @@ class CategoryListCreate(generics.ListCreateAPIView):
     queryset = ApproversCategory.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        
+        category = serializer.save()
+        
+        approvers = category.approvers.all()
+        
+        # Create notifications for each approver
+        for approver in approvers:
+            message = f"A new category '{category.category_name}' has been created and you have been assigned as an approver."
+            redirect_url = f"/categories/{category.id}/"  
+            
+            # Call your utility function to create notification
+            create_notification(
+                message=message,
+                redirect_url=redirect_url,
+                recipient_id=approver.id,
+                created_by=self.request.user
+            )
+        
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        self.perform_create(serializer)
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            {
+                'message': 'Category created successfully and notifications sent to approvers',
+                'data': serializer.data
+            }, 
+            status=status.HTTP_201_CREATED, 
+            headers=headers
+        )
 
 class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = ApproversCategory.objects.all()
