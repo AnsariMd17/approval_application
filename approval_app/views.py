@@ -631,7 +631,7 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 
         # Create TaskHistory record if approval_status is "rejected"
         if updated_instance.approval_status.lower() == "rejected":
-            updated_instance.approval_status = "resubmitted"
+            updated_instance.approval_status = "Resubmitted"
             updated_instance.save()
 
             TaskHistory.objects.create(
@@ -644,8 +644,8 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 
             approvers = updated_instance.approver.all()
             for approver in approvers:
-                message = f"Task '{updated_instance.task}' has been resubmitted and needs your approval."
-                redirect_url = f"/tasks/{task.id}?mode=approve"
+                message = f"Task '{updated_instance.task}' has been Resubmitted and requesting your approval."
+                redirect_url = f"/tasks/{Task.id}?mode=approve"
 
                 create_notification(
                     message=message,
@@ -653,12 +653,6 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
                     recipient_id=approver.id,
                     created_by=request.user
                 )
-            create_task_history(
-            task=task,
-            approval_status=approval_status.lower(), 
-            task_status=task.task_status,
-            created_by_user=request.user
-        )
                 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
