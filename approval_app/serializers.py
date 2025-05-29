@@ -5,9 +5,27 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
 class ClientSerializer(serializers.ModelSerializer):
+    tasks = serializers.SerializerMethodField()
     class Meta:
         model = Client
         fields = "__all__"
+        extra_fields = ['tasks']
+
+    def get_tasks(self, obj):
+        # Get all tasks for this client, prefetch the category for efficiency
+        tasks = obj.tasks.select_related('category').all()
+        if not tasks:
+            return None
+        return [
+            {
+                "task_id": task.id,
+                "task": task.task,
+                "category_id": task.category.id if task.category else None,
+                "category_name": task.category.category_name if task.category else None,
+            }
+            for task in tasks
+        ]
+
 
 class AdminUserSerializer(serializers.ModelSerializer):
     class Meta:
