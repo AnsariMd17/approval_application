@@ -198,3 +198,6 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+
+server_url = config('SERVER_URL')
