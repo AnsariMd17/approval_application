@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'approval_app',
     'rest_framework_simplejwt.token_blacklist',
     'notifications',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -55,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'approval_system.urls'
@@ -174,7 +176,8 @@ SENDGRID_DEFAULT_FROM_EMAIL = config('SENDGRID_FROM_EMAIL')
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Your React app's URL
+    "http://localhost:3000",  # React development server
+    "http://127.0.0.1:3000",  # React development server alternative
 ]
 CORS_ALLOW_METHODS = [
     'DELETE',

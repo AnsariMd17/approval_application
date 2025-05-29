@@ -575,6 +575,18 @@ class TaskListCreate(generics.ListCreateAPIView):
                 task_approvers.append(task_approver)
             
             TaskApprover.objects.bulk_create(task_approvers)
+            # Send notifications to all approvers
+            for approver in category_approvers:
+                message = f"The new task has been assigned in the category of {category_instance.category_name} requesting your approval"
+                redirect_url = f"/tasks/{task.id}?mode=approve"
+                
+                # Call your utility function to create notification
+                create_notification(
+                    message=message,
+                    redirect_url=redirect_url,
+                    recipient_id=approver.id,
+                    created_by=request.user
+                )
         
         create_task_history(
             task=task,
