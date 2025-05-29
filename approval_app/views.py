@@ -439,7 +439,7 @@ class CategoryListCreate(generics.ListCreateAPIView):
         # Create notifications for each approver
         for approver in approvers:
             message = f"A new category '{category.category_name}' has been created and you have been assigned as an approver."
-            redirect_url = f"/categories/{category.id}/"  
+            redirect_url = f"/categories/view/{category.id}/"  
             
             # Call your utility function to create notification
             create_notification(
@@ -632,13 +632,29 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 
         # Create TaskHistory record if approval_status is "rejected"
         if updated_instance.approval_status.lower() == "rejected":
+            updated_instance.approval_status = 'Pending'
+            updated_instance.save()
+            
             TaskHistory.objects.create(
                 task=updated_instance,
-                approval_status=updated_instance.approval_status,
+                approval_status='Resubmitted',
                 task_status=updated_instance.task_status,
                 created_by=request.user,
                 created_at=timezone.now()
             )
+            
+            category_approvers = updated_instance.category.approvers.all()
+            for approver in category_approvers:
+                message = f"The rejected task '{updated_instance.task}' has been Resubmitted and requires your approval"
+                redirect_url = f"/tasks/{updated_instance.id}?mode=approve"
+                
+                # Send notification to each approver
+                create_notification(
+                    message=message,
+                    redirect_url=redirect_url,
+                    recipient_id=approver.id,
+                    created_by=request.user
+                )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -678,10 +694,53 @@ class UpdateApprovalTaskView(APIView):
             task.approval_status = 'Approved'
             task_approver.is_approved_status = 'Approved'
             task_approver.save()
+
+            # Send notification for approval
+            message = f"The Task {task.task} approved by one of the approver"
+            redirect_url = f"/tasks/view/{task.id}/"
+            
+            # Send notification to the task creator
+            create_notification(
+                message=message,
+                redirect_url=redirect_url,
+                recipient_id=task.created_by.id,
+                created_by=request.user
+            )
+            
+            # Create task history entry for approval
+            create_task_history(
+                task=task,
+                approval_status='Approved',
+                task_status=task.task_status,
+                created_by_user=request.user
+            )
+
+
         elif approval_status == "reject":
             task.approval_status = 'Rejected'
             task_approver.is_approved_status = 'Rejected'
             task_approver.save()
+
+            # Send notification for rejection
+            message = f"The Task {task.task} rejected by one of the approver"
+            redirect_url = f"/tasks/edit/{task.id}/"
+            
+            # Send notification to the task creator
+            create_notification(
+                message=message,
+                redirect_url=redirect_url,
+                recipient_id=task.created_by.id,
+                created_by=request.user
+            )
+            
+            # Create task history entry for rejection
+            create_task_history(
+                task=task,
+                approval_status='Rejected',
+                task_status=task.task_status,
+                created_by_user=request.user
+            )
+
         else:
             return Response({'error': 'Invalid approval status.'}, status=status.HTTP_400_BAD_REQUEST)
 

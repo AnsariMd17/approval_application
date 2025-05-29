@@ -78,23 +78,22 @@ class UserNotificationsAPIView(APIView):
             user = AdminUser.objects.get(id=user_id)
            
         except AdminUser.DoesNotExist:
-           
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         
         # Base query for notifications
         notifications = Notification.objects.filter(recipient_id=user_id)
        
 
-        if is_expired is not None:
-            ## expired notification will not be displayed in dashboard
-            if is_expired.lower() == 'true':
-                notifications = notifications.filter(is_expired=True)
+        # if is_expired is not None:
+        #     ## expired notification will not be displayed in dashboard
+        #     if is_expired.lower() == 'true':
+        #         notifications = notifications.filter(is_expired=True)
                
-            elif is_expired.lower() == 'false':
-                notifications = notifications.filter(is_expired=False)
+        #     elif is_expired.lower() == 'false':
+        #         notifications = notifications.filter(is_expired=False)
                 
-            else:
-                return Response({"detail": "Invalid value for is_expired parameter. Use \'true\' or \'false\'."}, status=status.HTTP_400_BAD_REQUEST)
+        #     else:
+        #         return Response({"detail": "Invalid value for is_expired parameter. Use \'true\' or \'false\'."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Apply archived filter if archived parameter is provided
         if archived is not None:
