@@ -24,6 +24,7 @@ urlpatterns = [
     path('tasks/', TaskListCreate.as_view(), name='task-list-create'),
     path('tasks/<int:pk>/', TaskRetrieveUpdateDestroy.as_view(), name='task-detail'),
     path('tasks_approval/<int:task_id>/', UpdateApprovalTaskView.as_view(), name='task-approve'),
-    path('token/',SimpleTokenObtainPairView.as_view(),name='token-pair')
+    path('token/',SimpleTokenObtainPairView.as_view(),name='token-pair'),
+    path('api/signup/', views.SignupAPIView.as_view(), name='api_signup'),
 ]
 

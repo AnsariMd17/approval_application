@@ -789,3 +789,19 @@ class SimpleTokenObtainPairView(TokenObtainPairView):
     #     )
 
     #     return response
+@method_decorator(csrf_exempt, name='dispatch')
+class SignupAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = AdminUserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            user.set_password(request.data.get('password1'))
+            user.is_active = True
+            user.save()
+            return Response({
+                'message': 'User created successfully',
+                'user': AdminUserSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
