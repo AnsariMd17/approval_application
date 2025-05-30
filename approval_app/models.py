@@ -93,20 +93,6 @@ class TaskApprover(TimestampMixin):
 
     class Meta:
         db_table = 'task_approvers'
-    
-
-class ApproversCategory(TimestampMixin):
-    """
-    Model to categorize approvers
-    """
-    category_name = models.CharField(max_length=255, null=False, blank=False)
-    description = models.TextField(blank=True, null=True)
-    approvers = models.ManyToManyField(AdminUser, related_name='approvers_categories', blank=True)
-    class Meta:
-        db_table = 'approval_app_approvers_category'
-
-    def __str__(self):
-        return self.category_name
 
 class TaskHistory(TimestampMixin):
     """
@@ -134,3 +120,100 @@ class TaskHistory(TimestampMixin):
     
     def __str__(self):
         return f"Task {self.task.id} - {self.approval_status} (Status: {self.task_status})"
+    
+
+class Stage(TimestampMixin):
+    """
+    Stage model representing a stage in a category.
+    """
+    stage_name = models.CharField(max_length=255, null=False, blank=False)
+    stage_status = models.CharField(
+        max_length=50,
+        choices=[
+            ('pending', 'Pending'),
+            ('in_progress', 'In Progress'),
+            ('completed', 'Completed'),
+            ('incomplete', 'Incomplete'),
+        ],
+        default='pending'
+    )
+    stage_approval_status = models.CharField(
+        max_length=50,
+        choices=[
+            ('pending', 'Pending'),
+            ('approved', 'Approved'),
+            ('rejected', 'Rejected'),
+            ('self-approved', 'Self-Approved'),
+        ],
+        default='pending'
+    )
+    stage_approval_needed = models.BooleanField(default=False)
+    
+    stage_approvers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        through='StageApprover',
+        through_fields=('stage', 'approver'),
+        related_name='stage_approvers',
+        blank=True
+    )
+    stage_approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='stage_approved_by',
+        null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
+    stage_rejected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='stage_rejected_by',
+        null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
+    stage_approved_at = models.DateTimeField(null=True, blank=True)
+    stage_rejected_at = models.DateTimeField(null=True, blank=True)
+    stage_rejected_reason = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'approval_app_stage'
+
+    def __str__(self):
+        return self.stage_name
+    
+
+class StageApprover(TimestampMixin):
+    """
+    Through model for Stage and Approver (AdminUser) relationship.
+    Allows to store approval/rejection status for each stage-approver combo.
+    """
+    stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name='stage_approver_links')
+    approver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='approver_stage_links')
+    approval_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('approved', 'Approved'),
+            ('rejected', 'Rejected'),
+        ],
+        default='pending'
+    )
+
+    class Meta:
+        db_table = 'approval_app_stage_approver'
+        unique_together = ('stage', 'approver')
+
+    def __str__(self):
+        return f"Stage: {self.stage.stage_name} - Approver: {self.approver} ({self.approval_status})"
+    
+
+class ApproversCategory(TimestampMixin):
+    """
+    Model to categorize approvers
+    """
+    category_name = models.CharField(max_length=255, null=False, blank=False)
+    description = models.TextField(blank=True, null=True)
+    approvers = models.ManyToManyField(AdminUser, related_name='approvers_categories', blank=True)
+    stages = models.ManyToManyField(Stage, related_name='categories_stages', blank=False, null=False)
+    class Meta:
+        db_table = 'approval_app_approvers_category'
+
+    def __str__(self):
+        return self.category_name
