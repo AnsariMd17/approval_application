@@ -11,7 +11,6 @@ class Notification(TimestampMixin):
     redirect_url = models.URLField(null=True, blank=True)
     is_read = models.BooleanField(default=False)
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,null=True, blank=True)
-    approved_status = models.CharField(default='pending',null=True, blank=True, max_length=255)
     is_archive = models.BooleanField(default=False)
     
     def __str__(self):
