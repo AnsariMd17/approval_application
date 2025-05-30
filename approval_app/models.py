@@ -148,6 +148,13 @@ class Stage(TimestampMixin):
         default='pending'
     )
     stage_approval_needed = models.BooleanField(default=False)
+    category = models.ForeignKey(
+        'ApproversCategory',
+        on_delete=models.CASCADE,
+        related_name='category_stages',
+        null=True,
+        blank=True
+    )
     
     stage_approvers = models.ManyToManyField(
         settings.AUTH_USER_MODEL,

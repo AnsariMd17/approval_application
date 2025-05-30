@@ -431,9 +431,7 @@ class CategoryListCreate(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        
         category = serializer.save()
-        
         approvers = category.approvers.all()
         
         # Create notifications for each approver
@@ -452,9 +450,7 @@ class CategoryListCreate(generics.ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
         self.perform_create(serializer)
-        
         headers = self.get_success_headers(serializer.data)
         return Response(
             {

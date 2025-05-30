@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Client, AdminUser,ApproversCategory, Task, TaskHistory
+from .models import Client, AdminUser,ApproversCategory, Task, TaskHistory, Stage
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
@@ -42,6 +42,15 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ApproversCategory
         fields = "__all__"
+
+    def create(self, validated_data):
+        stages_data = validated_data.pop('stages', [])
+        category = super().create(validated_data)
+        # Create each stage and attach to category
+        for stage_data in stages_data:
+            stage = Stage.objects.create(**stage_data)
+            category.stages.add(stage)
+        return category
 
 
 # class TaskSerializer(serializers.ModelSerializer):
@@ -108,3 +117,21 @@ class TaskHistorySerializer(serializers.ModelSerializer):
             'id', 'approval_status', 'task_status', 'created_by', 'created_at'
         ]
         read_only_fields = ['id', 'created_by', 'created_at']
+
+
+class StageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stage
+        fields = [
+            "id",
+            "stage_name",
+            "stage_status",
+            "stage_approval_status",
+            "stage_approval_needed",
+            "stage_approved_by",
+            "stage_rejected_by",
+            "stage_approved_at",
+            "stage_rejected_at",
+            "stage_rejected_reason",
+        ]
+        read_only_fields = ["id"]
