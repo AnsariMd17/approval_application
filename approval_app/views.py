@@ -849,3 +849,14 @@ class SignupAPIView(APIView):
                 'user': AdminUserSerializer(user).data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+from rest_framework.generics import RetrieveAPIView
+class TaskRetrieveAPIView(RetrieveAPIView):
+    """
+    GET /api/tasks/<task_id>/
+    Returns a task with its category and stage details.
+    """
+    queryset = Task.objects.all()
+    serializer_class = TaskDetailSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'
