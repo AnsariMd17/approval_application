@@ -127,6 +127,7 @@ class Stage(TimestampMixin):
     Stage model representing a stage in a category.
     """
     stage_name = models.CharField(max_length=255, null=False, blank=False)
+    category = models.ForeignKey('approval_app.ApproversCategory',null=True, blank=True,on_delete=models.CASCADE)
     stage_status = models.CharField(
         max_length=50,
         choices=[

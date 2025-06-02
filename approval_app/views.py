@@ -624,26 +624,27 @@ class TaskListCreate(generics.ListCreateAPIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             first_stage = stages_qs.first()
-            first_stage_approvers = first_stage.stage_approvers.all()
+            if first_stage and is_approval_needed:
+                first_stage_approvers = first_stage.stage_approvers.all()
 
-            if not first_stage_approvers.exists():
-                return Response(
-                    {"detail": "No approvers found for the first stage in this category"}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                if not first_stage_approvers.exists():
+                    return Response(
+                        {"detail": "No approvers found for the first stage in this category"}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
-            for approver in first_stage_approvers:
-                message = (
-                    f"The new task has been assigned in the category of {category_instance.category_name} "
-                    f"and is requesting your approval for the first stage: {first_stage.stage_name}"
-                )
-                redirect_url = f"/tasks/{task.id}?mode=approve"
-                create_notification(
-                    message=message,
-                    redirect_url=redirect_url,
-                    recipient_id=approver.id,
-                    created_by=request.user
-                )
+                for approver in first_stage_approvers:
+                    message = (
+                        f"The new task has been assigned in the category of {category_instance.category_name} "
+                        f"and is requesting your approval for the first stage: {first_stage.stage_name}"
+                    )
+                    redirect_url = f"/tasks/{task.id}?mode=approve"
+                    create_notification(
+                        message=message,
+                        redirect_url=redirect_url,
+                        recipient_id=approver.id,
+                        created_by=request.user
+                    )
         
         create_task_history(
             task=task,
