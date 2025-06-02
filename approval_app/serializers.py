@@ -32,6 +32,7 @@ class StageSerializer(serializers.ModelSerializer):
         many=True,
         required=False
     )
+    id = serializers.IntegerField(required=False)
     class Meta:
         model = Stage
         fields = [
@@ -105,6 +106,66 @@ class CategorySerializer(serializers.ModelSerializer):
         # Return category and new_stages for use in the view
         self._new_stages = new_stages
         return category
+    
+    def update(self, instance, validated_data):
+        # Update category fields
+        instance.category_name = validated_data.get("category_name", instance.category_name)
+        instance.description = validated_data.get("description", instance.description)
+        instance.save()
+
+        # Update category approvers
+        if "approvers" in validated_data:
+            instance.approvers.set(validated_data["approvers"])
+
+        stages_data = validated_data.pop('stages', [])
+        existing_stages = {s.id: s for s in instance.stages.all()}
+        payload_stage_ids = set([s.get('id') for s in stages_data if s.get('id')])
+
+        new_stages = []
+        notified_stage_approvers = []  # (stage, [approver_ids])
+        for stage_data in stages_data:
+            stage_id = stage_data.get('id', None)
+            stage_approvers = stage_data.pop('stage_approvers', [])
+            # Always convert to IDs for all set logic and .set()
+            stage_approver_ids = [a.id if isinstance(a, AdminUser) else int(a) for a in stage_approvers]
+            stage_approval_needed = stage_data.get('stage_approval_needed', False)
+
+            if stage_id and stage_id in existing_stages:
+                stage = existing_stages[stage_id]
+                old_approvers = set(stage.stage_approvers.values_list('id', flat=True))
+                new_approvers = set(stage_approver_ids)
+                stage.stage_name = stage_data.get("stage_name", stage.stage_name)
+                stage.stage_status = stage_data.get("stage_status", stage.stage_status)
+                stage.stage_approval_needed = stage_approval_needed
+
+                # Handle approval status & approvers
+                if stage_approval_needed:
+                    stage.stage_approval_status = "pending"
+                    stage.stage_approvers.set(stage_approver_ids)
+                    newly_assigned = new_approvers - old_approvers
+                    if newly_assigned:
+                        notified_stage_approvers.append((stage, newly_assigned))
+                else:
+                    stage.stage_approvers.clear()
+                    stage.stage_approval_status = "self-approved"
+                stage.save()
+            else:
+                # New stage
+                if stage_approval_needed:
+                    stage_data["stage_approval_status"] = "pending"
+                else:
+                    stage_data["stage_approval_status"] = "self-approved"
+                stage = Stage.objects.create(**stage_data)
+                instance.stages.add(stage)
+                if stage_approver_ids:
+                    stage.stage_approvers.set(stage_approver_ids)
+                    if stage_approval_needed:
+                        notified_stage_approvers.append((stage, set(stage_approver_ids)))
+                new_stages.append(stage)
+
+        self._notified_stage_approvers = notified_stage_approvers
+        self._new_stages = new_stages
+        return instance
 
 
 # class TaskSerializer(serializers.ModelSerializer):

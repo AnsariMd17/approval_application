@@ -483,6 +483,38 @@ class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = 'pk'
 
+    def perform_update(self, serializer):
+        category = serializer.save()
+        
+        for stage, approver_ids in getattr(serializer, "_notified_stage_approvers", []):
+            for approver_id in approver_ids:
+                approver = AdminUser.objects.get(id=approver_id)
+                message = (
+                    f"You have been assigned as approver to the stage '{stage.stage_name}' "
+                    f"in category '{category.category_name}'."
+                )
+                redirect_url = f"/categories/{category.id}/stages/{stage.id}/"
+                create_notification(
+                    message=message,
+                    redirect_url=redirect_url,
+                    recipient_id=approver.id,
+                    created_by=self.request.user
+                )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(
+            {
+                'message': 'Category and stages updated successfully. Notifications sent as needed.',
+                'data': serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+
 class AdminListDetailAPI(APIView):
     permission_classes = [IsAuthenticated]
 
