@@ -46,7 +46,9 @@ class StageSerializer(serializers.ModelSerializer):
             "stage_approved_at",
             "stage_rejected_at",
             "stage_rejected_reason",
-            "stage_approvers"
+            "stage_approvers",
+            "created_at",
+            "created_by",	
         ]
         read_only_fields = ["id"]
 
@@ -89,7 +91,14 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         stages_data = validated_data.pop('stages', [])
-        category = super().create(validated_data)
+        approvers = validated_data.pop('approvers', [])
+        # category = super().create(validated_data)
+        request = self.context.get('request')
+        created_by = request.user if request else None
+        validated_data['created_by'] = created_by
+        category = ApproversCategory.objects.create(**validated_data)
+        if approvers:
+            category.approvers.set(approvers)
         new_stages = []
         for stage_data in stages_data:
             stage_approvers = stage_data.pop('stage_approvers', [])
@@ -98,7 +107,9 @@ class CategorySerializer(serializers.ModelSerializer):
                 stage_data['stage_approval_status'] = 'Pending'
             else:
                 stage_data['stage_approval_status'] = 'Self-Approved'
-            stage = Stage.objects.create(**stage_data)
+
+            stage_data['created_by'] = created_by
+            stage = Stage.objects.create(**stage_data, category=category)
             category.stages.add(stage)
             if stage_approvers:
                 stage.stage_approvers.set(stage_approvers)
