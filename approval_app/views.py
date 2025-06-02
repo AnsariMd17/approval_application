@@ -446,6 +446,22 @@ class CategoryListCreate(generics.ListCreateAPIView):
                 recipient_id=approver.id,
                 created_by=self.request.user
             )
+
+            # Send stage approver notifications only for those with approval needed
+            for stage in getattr(serializer, '_new_stages', []):
+                if stage.stage_approval_needed:
+                    for approver in stage.stage_approvers.all():
+                        stage_message = (
+                            f"A New stage '{stage.stage_name}' has been activated and it has been assigned to the category of "
+                            f"'{category.category_name}' requesting your approval"
+                        )
+                        stage_redirect_url = f"/categories/{category.id}/stages/{stage.id}/"
+                        create_notification(
+                            message=stage_message,
+                            redirect_url=stage_redirect_url,
+                            recipient_id=approver.id,
+                            created_by=self.request.user
+                        )
         
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

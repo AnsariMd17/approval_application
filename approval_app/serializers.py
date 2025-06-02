@@ -26,6 +26,29 @@ class ClientSerializer(serializers.ModelSerializer):
             for task in tasks
         ]
 
+class StageSerializer(serializers.ModelSerializer):
+    stage_approvers = serializers.PrimaryKeyRelatedField(
+        queryset=AdminUser.objects.all(),
+        many=True,
+        required=False
+    )
+    class Meta:
+        model = Stage
+        fields = [
+            "id",
+            "stage_name",
+            "stage_status",
+            "stage_approval_status",
+            "stage_approval_needed",
+            "stage_approved_by",
+            "stage_rejected_by",
+            "stage_approved_at",
+            "stage_rejected_at",
+            "stage_rejected_reason",
+            "stage_approvers"
+        ]
+        read_only_fields = ["id"]
+
 
 class AdminUserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,17 +62,48 @@ class CategorySerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    stages = StageSerializer(many=True, required=False)
     class Meta:
         model = ApproversCategory
         fields = "__all__"
 
+    def validate(self, attrs):
+        approvers = attrs.get('approvers', [])
+        stages = self.initial_data.get('stages', [])
+
+        # Convert to set of IDs for easy checking
+        category_approver_ids = set([a.id if isinstance(a, AdminUser) else int(a) for a in approvers])
+
+        for idx, stage in enumerate(stages):
+            stage_approver_ids = set(stage.get('stage_approvers', []))
+            # Validate: stage approvers must be subset of category approvers
+            if not stage_approver_ids.issubset(category_approver_ids):
+                raise serializers.ValidationError({
+                    "stages": [
+                        f"stage_approver Ids must be a subset of category approvers IDs."
+                    ]
+                })
+        return attrs
+
+
     def create(self, validated_data):
         stages_data = validated_data.pop('stages', [])
         category = super().create(validated_data)
-        # Create each stage and attach to category
+        new_stages = []
         for stage_data in stages_data:
+            stage_approvers = stage_data.pop('stage_approvers', [])
+            stage_approval_needed = stage_data.get('stage_approval_needed', False)
+            if stage_approval_needed:
+                stage_data['stage_approval_status'] = 'Pending'
+            else:
+                stage_data['stage_approval_status'] = 'Self-Approved'
             stage = Stage.objects.create(**stage_data)
             category.stages.add(stage)
+            if stage_approvers:
+                stage.stage_approvers.set(stage_approvers)
+            new_stages.append(stage)
+        # Return category and new_stages for use in the view
+        self._new_stages = new_stages
         return category
 
 
@@ -117,21 +171,3 @@ class TaskHistorySerializer(serializers.ModelSerializer):
             'id', 'approval_status', 'task_status', 'created_by', 'created_at'
         ]
         read_only_fields = ['id', 'created_by', 'created_at']
-
-
-class StageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Stage
-        fields = [
-            "id",
-            "stage_name",
-            "stage_status",
-            "stage_approval_status",
-            "stage_approval_needed",
-            "stage_approved_by",
-            "stage_rejected_by",
-            "stage_approved_at",
-            "stage_rejected_at",
-            "stage_rejected_reason",
-        ]
-        read_only_fields = ["id"]
