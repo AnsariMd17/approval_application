@@ -240,8 +240,7 @@ class ApproversCategorySerializer(serializers.ModelSerializer):
         model = ApproversCategory
         fields = ['id', 'category_name', 'stages']
 class TaskDetailSerializer(serializers.ModelSerializer):
-    category = ApproversCategorySerializer(read_only=True)  # Nested category + stages
-    #current_stage = StageSerializer(read_only=True)  # Current stage details
+    category = ApproversCategorySerializer(read_only=True)  
     history = TaskHistorySerializer(source='task_histories',many=True, read_only=True)
 
     class Meta:
@@ -253,7 +252,6 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             'task_status',
             'approval_status',
             'category',
-            #'current_stage',  # Shows the current active stage
             'history',
             'created_at',
             'created_by'
