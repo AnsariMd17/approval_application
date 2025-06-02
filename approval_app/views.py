@@ -483,38 +483,6 @@ class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = 'pk'
 
-    def perform_update(self, serializer):
-        category = serializer.save()
-        
-        for stage, approver_ids in getattr(serializer, "_notified_stage_approvers", []):
-            for approver_id in approver_ids:
-                approver = AdminUser.objects.get(id=approver_id)
-                message = (
-                    f"You have been assigned as approver to the stage '{stage.stage_name}' "
-                    f"in category '{category.category_name}'."
-                )
-                redirect_url = f"/categories/{category.id}/stages/{stage.id}/"
-                create_notification(
-                    message=message,
-                    redirect_url=redirect_url,
-                    recipient_id=approver.id,
-                    created_by=self.request.user
-                )
-
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(
-            {
-                'message': 'Category and stages updated successfully. Notifications sent as needed.',
-                'data': serializer.data
-            },
-            status=status.HTTP_200_OK
-        )
-
 class AdminListDetailAPI(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -569,20 +537,29 @@ class TaskListCreate(generics.ListCreateAPIView):
                 {"detail": "Category ID is required"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        try:
-            category_instance = ApproversCategory.objects.get(id=category_id.id)
-        except ApproversCategory.DoesNotExist:
-            return Response(
-                {"detail": "Category not found"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
         is_approval_needed = validated_data.get('is_approval_needed', False)
-        if is_approval_needed:
-            approval_status = 'Pending'
-        else:
-            approval_status = 'Self-Approved'
+        approval_status = 'Pending' if is_approval_needed else 'Self-Approved'
+
+        initial_stage = category_id.stages.first()
+        if is_approval_needed and not initial_stage:
+            return Response(
+                {"detail": "No stages found for this category"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # try:
+        #     category_instance = ApproversCategory.objects.get(id=category_id.id)
+        # except ApproversCategory.DoesNotExist:
+        #     return Response(
+        #         {"detail": "Category not found"}, 
+        #         status=status.HTTP_404_NOT_FOUND
+        #     )
+        
+        # is_approval_needed = validated_data.get('is_approval_needed', False)
+        # if is_approval_needed:
+        #     approval_status = 'Pending'
+        # else:
+        #     approval_status = 'Self-Approved'
         
         task = Task.objects.create(
             client_id=validated_data['client_id'],
@@ -592,36 +569,36 @@ class TaskListCreate(generics.ListCreateAPIView):
             task_due_date=validated_data.get('task_due_date'),
             task_completed_date=validated_data.get('task_completed_date'),
             is_approval_needed=is_approval_needed,
-            category=category_instance,
+            category=category_id,
+            current_stage=initial_stage,
             approval_status=approval_status,
             created_by=request.user,
             created_at = timezone.now()
         )
-        
-        if is_approval_needed:
-            category_approvers = category_instance.approvers.all()
-            
-            if not category_approvers.exists():
+        if is_approval_needed and initial_stage:
+            # Get stage approvers
+            stage_approvers = initial_stage.stage_approvers.all()
+            if not stage_approvers.exists():
                 return Response(
-                    {"detail": "No approvers found for the selected category"}, 
+                    {"detail": "No approvers found for the initial stage"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+        # if is_approval_needed:
+        #     category_approvers = category_id.approvers.all()
             
-            task_approvers = []
-            for approver in category_approvers:
-                task_approver = TaskApprover(
+            task_approvers = [
+                TaskApprover(
                     Task=task,
                     approver=approver,
                     is_approved_status='Pending',
-                    created_by=request.user,
-                    created_at = timezone.now()
+                    created_by=request.user
                 )
-                task_approvers.append(task_approver)
-            
+                for approver in stage_approvers
+            ]
             TaskApprover.objects.bulk_create(task_approvers)
             # Send notifications to all approvers
-            for approver in category_approvers:
-                message = f"The new task has been assigned in the category of {category_instance.category_name} requesting your approval"
+            for approver in stage_approvers:
+                message = f"New task '{task.task}' in stage '{initial_stage.stage_name}' requires your approval",
                 redirect_url = f"/tasks/{task.id}?mode=approve"
                 
                 # Call your utility function to create notification
@@ -634,7 +611,7 @@ class TaskListCreate(generics.ListCreateAPIView):
         
         create_task_history(
             task=task,
-            approval_status=approval_status.lower(), 
+            approval_status=approval_status.lower(),    
             task_status=task.task_status,
             created_by_user=request.user
         )
@@ -738,48 +715,82 @@ class UpdateApprovalTaskView(APIView):
         all_approver_ids = [ta.approver.id for ta in approvers_for_tasks if ta.approver]
 
         if approval_status == "approve":
-            task.approval_status = 'Approved'
-            task_approver.is_approved_status = 'Approved'
-            task_approver.save()
+            task.current_stage.stage_approval_status = "approved"
+            task.current_stage.stage_approved_by = current_user_id
+            task.current_stage.stage_approved_at = timezone.now()
+            task.current_stage.save()
+            # task.approval_status = 'Approved'
+            # task_approver.is_approved_status = 'Approved'
+            # task_approver.save()
+            next_stage = (
+                    Stage.objects
+                    .filter(categories_stages=task.category, created_at__gt=task.current_stage.created_at)
+                    .order_by('created_at')
+                    .first()
+                )
 
+            if next_stage:
+                    # Notify next stage's approvers
+                for approver in next_stage.stage_approvers.all():
+                    create_notification(
+                            message=f"Task '{task.task}' is ready for stage '{next_stage.stage_name}'",
+                            redirect_url=f"/tasks/{task.id}?mode=approve",
+                            recipient_id=approver.id,
+                            created_by=current_user_id
+                        )
+                    # Update task's current stage
+                    task.current_stage = next_stage
+                    task.save()
+                else:
+                    # No more stages → mark task as fully approved
+                    task.approval_status = "Approved"
+                    task.save()
             # Send notification for approval
-            message = f"The Task {task.task} approved by one of the approver"
+            message = f"The Task {task.task} was approved in stage '{task.current_stage.stage_name}'"
             redirect_url = f"/tasks/view/{task.id}/"
             
             # Send notification to the task creator
-            for approver_id in all_approver_ids:
-                create_notification(
-                    message=message,
-                    redirect_url=redirect_url,
-                    recipient_id=approver_id,
-                    created_by=request.user
-                )
+            # for approver_id in all_approver_ids:
+            # create_notification(
+            #         message=message,
+            #         redirect_url=redirect_url,
+            #         recipient_id=task.created_by.id,
+            #         created_by=request.user
+            #     )
             
             # Create task history entry for approval
             create_task_history(
                 task=task,
                 approval_status='Approved',
                 task_status=task.task_status,
-                created_by_user=request.user
+                created_by_user=current_user_id
             )
 
 
         elif approval_status == "reject":
-            task.approval_status = 'Rejected'
-            task_approver.is_approved_status = 'Rejected'
-            task_approver.save()
+            task.current_stage.stage_approval_status = "rejected"
+            task.current_stage.stage_rejected_by = current_user_id
+            task.current_stage.stage_rejected_at = timezone.now()
+            task.current_stage.save()
+
+                # Update task status
+            task.approval_status = "Rejected"
+            task.save()
+            # task.approval_status = 'Rejected'
+            # task_approver.is_approved_status = 'Rejected'
+            # task_approver.save()
 
             # Send notification for rejection
             message = f"The Task {task.task} rejected by one of the approver"
             redirect_url = f"/tasks/edit/{task.id}/"
             
             # Send notification to the task creator
-            for approver_id in all_approver_ids:
-                create_notification(
+            # for approver_id in all_approver_ids:
+            create_notification(
                     message=message,
                     redirect_url=redirect_url,
-                    recipient_id=approver_id,
-                    created_by=request.user
+                    recipient_id=task.created_by.id,
+                    created_by=current_user_id
                 )
             
             # Create task history entry for rejection
@@ -787,7 +798,7 @@ class UpdateApprovalTaskView(APIView):
                 task=task,
                 approval_status='Rejected',
                 task_status=task.task_status,
-                created_by_user=request.user
+                created_by_user=current_user_id
             )
 
         else:
@@ -849,3 +860,14 @@ class SignupAPIView(APIView):
                 'user': AdminUserSerializer(user).data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+from rest_framework.generics import RetrieveAPIView
+class TaskRetrieveAPIView(RetrieveAPIView):
+    """
+    GET /api/tasks/<task_id>/
+    Returns a task with its category and stage details.
+    """
+    queryset = Task.objects.all()
+    serializer_class = TaskDetailSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'

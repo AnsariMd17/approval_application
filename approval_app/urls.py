@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from .views import *
+from .views import TaskRetrieveAPIView
 
 
 urlpatterns = [
@@ -26,5 +27,6 @@ urlpatterns = [
     path('tasks_approval/<int:task_id>/', UpdateApprovalTaskView.as_view(), name='task-approve'),
     path('token/',SimpleTokenObtainPairView.as_view(),name='token-pair'),
     path('api/signup/', views.SignupAPIView.as_view(), name='api_signup'),
+    path('api/tasks/<int:pk>/', TaskRetrieveAPIView.as_view(), name='task-detail'),
 ]
 

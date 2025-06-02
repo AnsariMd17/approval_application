@@ -77,6 +77,13 @@ class Task(TimestampMixin):
         blank=True
        
     )
+    current_stage = models.ForeignKey(
+        'approval_app.Stage',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tasks'
+    )
     class Meta:
         db_table = 'approval_app_task'
 
@@ -122,7 +129,7 @@ class TaskHistory(TimestampMixin):
         return f"Task {self.task.id} - {self.approval_status} (Status: {self.task_status})"
     
 
-class Stage(TimestampMixin):
+class Stage(TimestampMixin): 
     """
     Stage model representing a stage in a category.
     """

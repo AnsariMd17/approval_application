@@ -232,3 +232,58 @@ class TaskHistorySerializer(serializers.ModelSerializer):
             'id', 'approval_status', 'task_status', 'created_by', 'created_at'
         ]
         read_only_fields = ['id', 'created_by', 'created_at']
+#////////
+
+class StageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stage
+        fields = [
+            'id',
+            'stage_name',
+            'stage_status',
+            'stage_approval_status',
+            'stage_approval_needed',
+            'stage_approved_by',
+            'stage_rejected_by',
+            'stage_approved_at',
+            'stage_rejected_at',
+            'stage_rejected_reason'
+        ]
+
+class ApproversCategorySerializer(serializers.ModelSerializer):
+    stages = StageSerializer(many=True, read_only=True)  # Include all stages in the category
+    
+    class Meta:
+        model = ApproversCategory
+        fields = ['id', 'category_name', 'stages']
+
+class TaskHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskHistory
+        fields = [
+            'id',
+            'approval_status',
+            'task_status',
+            'created_at',
+            'created_by',
+            'changed_by'
+        ]   
+class TaskDetailSerializer(serializers.ModelSerializer):
+    category = ApproversCategorySerializer(read_only=True)  # Nested category + stages
+    #current_stage = StageSerializer(read_only=True)  # Current stage details
+    history = TaskHistorySerializer(source='task_histories',many=True, read_only=True)
+    
+    class Meta:
+        model = Task
+        fields = [
+            'id',
+            'task',
+            'task_description',
+            'task_status',
+            'approval_status',
+            'category',
+            #'current_stage',  # Shows the current active stage
+            'history',
+            'created_at',
+            'created_by'
+        ]

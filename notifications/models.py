@@ -12,6 +12,7 @@ class Notification(TimestampMixin):
     is_read = models.BooleanField(default=False)
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,null=True, blank=True)
     is_archive = models.BooleanField(default=False)
+    is_expired = models.BooleanField(default=False)
     
     def __str__(self):
         return self.message
