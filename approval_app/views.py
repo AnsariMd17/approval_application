@@ -1127,3 +1127,15 @@ class SignupAPIView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
+class UserListView(generics.ListAPIView):
+    queryset = AdminUser.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]  # or adjust permission as needed
+
+class UserDetailView(generics.RetrieveAPIView):
+    queryset = AdminUser.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'  
+    

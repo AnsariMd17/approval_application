@@ -26,5 +26,7 @@ urlpatterns = [
     path('tasks_approval/<int:task_id>/', UpdateApprovalTaskView.as_view(), name='task-approve'),
     path('token/',SimpleTokenObtainPairView.as_view(),name='token-pair'),
     path('api/signup/', views.SignupAPIView.as_view(), name='api_signup'),
+    path('api/users/', UserListView.as_view(), name='admin-user-list'),
+    path('api/users/<int:pk>/', UserDetailView.as_view(), name='admin-user-detail'),
 ]
 
