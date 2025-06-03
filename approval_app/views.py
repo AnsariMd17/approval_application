@@ -440,14 +440,14 @@ class CategoryListCreate(generics.ListCreateAPIView):
         for approver in approvers:
             message = f"A new category '{category.category_name}' has been created and you have been assigned as an approver."
 
-            server_url = settings.server_url
+            # server_url = settings.server_url
             user_redirect_url = f"/categories/view/{category.id}/" 
-            redirect_url = f"{server_url}{user_redirect_url}"
+            # redirect_url = f"{server_url}{user_redirect_url}"
             
             # Call your utility function to create notification
             create_notification(
                 message=message,
-                redirect_url=redirect_url,
+                redirect_url=user_redirect_url,
                 recipient_id=approver.id,
                 created_by=self.request.user
             )
@@ -482,12 +482,12 @@ class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
                     f"You have been assigned as approver to the stage '{stage.stage_name}' "
                     f"in category '{category.category_name}'."
                 )
-                server_url = settings.server_url
+                # server_url = settings.server_url
                 user_redirect_url = f"/categories/{category.id}/stages/{stage.id}/"
-                redirect_url = f"{server_url}{user_redirect_url}"
+                # redirect_url = f"{server_url}{user_redirect_url}"
                 create_notification(
                     message=message,
-                    redirect_url=redirect_url,
+                    redirect_url=user_redirect_url,
                     recipient_id=approver.id,
                     created_by=self.request.user
                 )
@@ -637,12 +637,12 @@ class TaskListCreate(generics.ListCreateAPIView):
                         f"The new task has been assigned in the category of {category_instance.category_name} "
                         f"and is requesting your approval for the first stage: {first_stage.stage_name}"
                     )
-                    server_url = settings.server_url
-                    user_redirect_url = f"/tasks/{task.id}?mode=approve"
-                    redirect_url = f"{server_url}{user_redirect_url}"
+                    # server_url = settings.server_url
+                    user_redirect_url = f"/tasks/{task.id}/stages/{first_stage.id}?mode=approve"
+                    # redirect_url = f"{server_url}{user_redirect_url}"
                     create_notification(
                         message=message,
-                        redirect_url=redirect_url,
+                        redirect_url=user_redirect_url,
                         recipient_id=approver.id,
                         created_by=request.user
                     )
@@ -717,12 +717,12 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
                                 f"The task '{updated_instance.task}' has been edited and Resubmitted by the creator, "
                                 f"and is requesting your approval again for the stage: {stage.stage_name}"
                             )
-                            server_url = settings.server_url
-                            user_redirect_url = f"/tasks/{updated_instance.id}?mode=approve"
-                            redirect_url = f"{server_url}{user_redirect_url}"
+                            # server_url = settings.server_url
+                            user_redirect_url = f"/tasks/{updated_instance.id}/stage/{stage.id}?mode=approve"
+                            # redirect_url = f"{server_url}{user_redirect_url}"
                             create_notification(
                                 message=message,
-                                redirect_url=redirect_url,
+                                redirect_url=user_redirect_url,
                                 recipient_id=approver.id,
                                 created_by=request.user
                             )
@@ -952,16 +952,16 @@ class UpdateApprovalTaskView(APIView):
             # Send notification for stage approval
             message = f"Stage '{stage.stage_name}' has been approved by one of the approvers"
 
-            server_url = settings.server_url
+            # server_url = settings.server_url
             user_redirect_url = f"/tasks/view/{task.id}/"
-            redirect_url = f"{server_url}{user_redirect_url}"
+            # redirect_url = f"{server_url}{user_redirect_url}"
             
             # Get all stage approvers for notification
             stage_approvers = StageApprover.objects.filter(stage=stage).exclude(approver__isnull=True)
             for sa in stage_approvers:
                 create_notification(
                     message=message,
-                    redirect_url=redirect_url,
+                    redirect_url=user_redirect_url,
                     recipient_id=sa.approver.id,
                     created_by=request.user
                 )
@@ -1023,14 +1023,14 @@ class UpdateApprovalTaskView(APIView):
             # Send notification for stage rejection
             message = f"Stage '{stage.stage_name}' has been rejected by one of the approvers for your task '{task.task}'."
         
-            server_url = settings.server_url
+            # server_url = settings.server_url
             user_redirect_url = f"/tasks/edit/{task.id}/"
-            redirect_url = f"{server_url}{user_redirect_url}"
+            # redirect_url = f"{server_url}{user_redirect_url}"
 
             if task.created_by_id:
                 create_notification(
                     message=message,
-                    redirect_url=redirect_url,
+                    redirect_url=user_redirect_url,
                     recipient_id=task.created_by_id,
                     created_by=request.user
                 )
