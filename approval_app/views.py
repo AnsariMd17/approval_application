@@ -623,29 +623,32 @@ class TaskListCreate(generics.ListCreateAPIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             first_stage = stages_qs.first()
-            if first_stage and is_approval_needed and first_stage.stage_approval_needed:
-                first_stage_approvers = first_stage.stage_approvers.all()
+            if is_approval_needed:
+                for stage in stages_qs:
+                    if stage.stage_approval_needed:
+                        stage_approvers = stage.stage_approvers.all()
 
-                if not first_stage_approvers.exists():
-                    return Response(
-                        {"detail": "No approvers found for the first stage in this category"}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                        if not stage_approvers.exists():
+                            return Response(
+                                {"detail": f"No approvers found for the {stage.stage_name} in this category"}, 
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
 
-                for approver in first_stage_approvers:
-                    message = (
-                        f"The new task has been assigned in the category of {category_instance.category_name} "
-                        f"and is requesting your approval for the first stage: {first_stage.stage_name}"
-                    )
-                    # server_url = settings.server_url
-                    user_redirect_url = f"/tasks/{task.id}/stages/{first_stage.id}?mode=approve"
-                    # redirect_url = f"{server_url}{user_redirect_url}"
-                    create_notification(
-                        message=message,
-                        redirect_url=user_redirect_url,
-                        recipient_id=approver.id,
-                        created_by=request.user
-                    )
+                        for approver in stage_approvers:
+                            message = (
+                                f"The new task has been assigned in the category of {category_instance.category_name} "
+                                f"and is requesting your approval for the stage: {stage.stage_name}"
+                            )
+                            #server_url = settings.server_url
+                            user_redirect_url = f"/tasks/{task.id}/stages/{stage.id}?mode=approve"
+                            #redirect_url = f"{server_url}{user_redirect_url}"
+                            create_notification(
+                                message=message,
+                                redirect_url=user_redirect_url,
+                                recipient_id=approver.id,
+                                created_by=request.user
+                            )
+                            break
         
         create_task_history(
             task=task,
