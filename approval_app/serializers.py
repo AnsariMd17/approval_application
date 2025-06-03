@@ -260,3 +260,9 @@ class StageApproverSerializer(serializers.ModelSerializer):
     class Meta:
         model = StageApprover
         fields = ['id', 'approver', 'approval_status', 'created_by', 'created_at', 'changed_by', 'changed_at']
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminUser
+        fields = ['id','first_name','last_name','email','username']
