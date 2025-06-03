@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Client, AdminUser,ApproversCategory, Task, TaskHistory, Stage
+from .models import Client, AdminUser,ApproversCategory, Task, TaskHistory, Stage, StageApprover
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
@@ -32,6 +32,8 @@ class StageSerializer(serializers.ModelSerializer):
         many=True,
         required=False
     )
+    stage_approved_by = serializers.PrimaryKeyRelatedField(read_only=True)
+    stage_rejected_by = serializers.PrimaryKeyRelatedField(read_only=True)
     id = serializers.IntegerField(required=False)
     class Meta:
         model = Stage
@@ -187,12 +189,13 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class TaskSerializer(serializers.ModelSerializer):
     task_history = serializers.SerializerMethodField()
+    stages = serializers.SerializerMethodField()
     class Meta:
         model = Task
         fields = [
             'id', 'client_id', 'task', 'task_status', 'task_description', 
             'task_due_date', 'task_completed_date', 'is_approval_needed', 
-            'category', 'approval_status', 'approver', 'created_at', 'task_history'
+            'category', 'approval_status', 'approver', 'created_at', 'task_history', 'stages'
         ]
         read_only_fields = ['id', 'approver', 'approval_status', 'created_at', 'changed_at']
 
@@ -200,6 +203,13 @@ class TaskSerializer(serializers.ModelSerializer):
         history_records = TaskHistory.objects.filter(task=obj).order_by('-created_at')
         return TaskHistorySerializer(history_records, many=True).data
 
+    def get_stages(self, obj):
+        # Return all stages linked to the task's category, ordered by id
+        if obj.category:
+            stages = obj.category.stages.all().order_by('id')
+            return StageSerializer(stages, many=True).data
+        else:
+            return []
 class TaskCreateSerializer(serializers.ModelSerializer):
     """
     Serializer specifically for task creation with limited fields
@@ -244,26 +254,9 @@ class TaskHistorySerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_by', 'created_at']
 
-class ApproversCategorySerializer(serializers.ModelSerializer):
-    stages = StageSerializer(many=True, read_only=True)  # Include all stages in the category
 
+class StageApproverSerializer(serializers.ModelSerializer):
+    approver = serializers.PrimaryKeyRelatedField(read_only=True)
     class Meta:
-        model = ApproversCategory
-        fields = ['id', 'category_name', 'stages']
-class TaskDetailSerializer(serializers.ModelSerializer):
-    category = ApproversCategorySerializer(read_only=True)  
-    history = TaskHistorySerializer(source='task_histories',many=True, read_only=True)
-
-    class Meta:
-        model = Task
-        fields = [
-            'id',
-            'task',
-            'task_description',
-            'task_status',
-            'approval_status',
-            'category',
-            'history',
-            'created_at',
-            'created_by'
-        ]
+        model = StageApprover
+        fields = ['id', 'approver', 'approval_status', 'created_by', 'created_at', 'changed_by', 'changed_at']

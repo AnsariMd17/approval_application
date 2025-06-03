@@ -448,22 +448,6 @@ class CategoryListCreate(generics.ListCreateAPIView):
                 recipient_id=approver.id,
                 created_by=self.request.user
             )
-
-            # Send stage approver notifications only for those with approval needed
-            for stage in getattr(serializer, '_new_stages', []):
-                if stage.stage_approval_needed:
-                    for approver in stage.stage_approvers.all():
-                        stage_message = (
-                            f"A New stage '{stage.stage_name}' has been activated and it has been assigned to the category of "
-                            f"'{category.category_name}' requesting your approval"
-                        )
-                        stage_redirect_url = f"/categories/{category.id}/stages/{stage.id}/"
-                        create_notification(
-                            message=stage_message,
-                            redirect_url=stage_redirect_url,
-                            recipient_id=approver.id,
-                            created_by=self.request.user
-                        )
         
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -607,17 +591,25 @@ class TaskListCreate(generics.ListCreateAPIView):
                     {"detail": "No approvers found for the selected category"}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            task_approvers = [
-                TaskApprover(
-                    Task=task,
-                    approver=approver,
-                    is_approved_status='Pending',
-                    created_by=request.user,
-                    created_at=timezone.now()
+            try:
+                task_approvers = [
+                    TaskApprover(
+                        Task=task,
+                        approver=approver,
+                        is_approved_status='Pending',
+                        created_by=request.user,
+                        created_at=timezone.now()
+                    )
+                    for approver in category_approvers
+                ]
+                TaskApprover.objects.bulk_create(task_approvers)
+                print("task approver created successfully")
+            except Exception as e:
+                print("task approver creation failed")
+                return Response(
+                    {"detail": f"Error creating task approvers: {str(e)}"}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-                for approver in category_approvers
-            ]
-            TaskApprover.objects.bulk_create(task_approvers)
 
             stages_qs = category_instance.stages.all().order_by('id')
             if not stages_qs.exists():
@@ -873,15 +865,15 @@ class UpdateApprovalTaskView(APIView):
     
     def put(self, request, task_id):
         client_id = request.data.get('client_id')
+        category_id = request.data.get('category_id')
         approval_status = request.data.get('approval_status')
         stage_id = request.data.get('stage_id')
         stage_status = request.data.get('stage_status')
         stage_rejected_reason = request.data.get('stage_rejected_reason')
-        current_user_id = request.user.id
+        current_user_id = request.user
         
-        # Basic validation
-        if not client_id or not task_id or not stage_id:
-            return Response({'error': 'Client ID, task ID and stage ID are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not client_id or not task_id or not stage_id or not category_id:
+            return Response({'error': 'Client ID, task ID, category ID, and stage ID are required.'}, status=status.HTTP_400_BAD_REQUEST)
         
         if approval_status.lower() not in ["approve", "reject"]:
             return Response(
@@ -891,8 +883,8 @@ class UpdateApprovalTaskView(APIView):
         
         try:
             client = Client.objects.get(id=client_id)
-            task = Task.objects.get(id=task_id, client_id=client)
-            stage = Stage.objects.get(id=stage_id)
+            task = Task.objects.get(id=task_id, client_id=client, category_id=category_id)
+            stage = Stage.objects.get(id=stage_id, category_id=category_id)
             stage_approver = StageApprover.objects.get(stage=stage, approver=current_user_id)
         except Client.DoesNotExist:
             return Response({'error': 'Client not found.'}, status=status.HTTP_404_NOT_FOUND)
@@ -911,12 +903,14 @@ class UpdateApprovalTaskView(APIView):
         if approval_status.lower() == "approve":
             # Update Stage model
             stage.stage_approval_status = 'Approved'
-            stage.stage_approved_by = request.user
+            stage.stage_approved_by = current_user_id
             stage.stage_approved_at = current_time
             
             # Update stage status if provided
             if stage_status:
                 stage.stage_status = stage_status.lower()
+
+            stage.changed_by = current_user_id
             
             stage.save()
             
@@ -974,7 +968,7 @@ class UpdateApprovalTaskView(APIView):
         elif approval_status.lower() == "reject":
             # Update Stage model
             stage.stage_approval_status = 'Rejected'
-            stage.stage_rejected_by = request.user
+            stage.stage_rejected_by = current_user_id
             stage.stage_rejected_at = current_time
             
             # Store rejection reason if provided
@@ -985,6 +979,7 @@ class UpdateApprovalTaskView(APIView):
             if stage_status:
                 stage.stage_status = stage_status.lower()
             
+            stage.changed_by = current_user_id
             stage.save()
             
             # Update StageApprover model
@@ -1096,13 +1091,3 @@ class SignupAPIView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-from rest_framework.generics import RetrieveAPIView
-class TaskRetrieveAPIView(RetrieveAPIView):
-    """
-    GET /api/tasks/<task_id>/
-    Returns a task with its category and stage details.
-    """
-    queryset = Task.objects.all()
-    serializer_class = TaskDetailSerializer
-    permission_classes = [IsAuthenticated]
-    lookup_field = 'pk'
