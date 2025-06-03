@@ -439,7 +439,10 @@ class CategoryListCreate(generics.ListCreateAPIView):
         # Create notifications for each approver
         for approver in approvers:
             message = f"A new category '{category.category_name}' has been created and you have been assigned as an approver."
-            redirect_url = f"/categories/view/{category.id}/"  
+
+            server_url = settings.server_url
+            user_redirect_url = f"/categories/view/{category.id}/" 
+            redirect_url = f"{server_url}{user_redirect_url}"
             
             # Call your utility function to create notification
             create_notification(
@@ -479,7 +482,9 @@ class CategoryRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
                     f"You have been assigned as approver to the stage '{stage.stage_name}' "
                     f"in category '{category.category_name}'."
                 )
-                redirect_url = f"/categories/{category.id}/stages/{stage.id}/"
+                server_url = settings.server_url
+                user_redirect_url = f"/categories/{category.id}/stages/{stage.id}/"
+                redirect_url = f"{server_url}{user_redirect_url}"
                 create_notification(
                     message=message,
                     redirect_url=redirect_url,
@@ -632,7 +637,9 @@ class TaskListCreate(generics.ListCreateAPIView):
                         f"The new task has been assigned in the category of {category_instance.category_name} "
                         f"and is requesting your approval for the first stage: {first_stage.stage_name}"
                     )
-                    redirect_url = f"/tasks/{task.id}?mode=approve"
+                    server_url = settings.server_url
+                    user_redirect_url = f"/tasks/{task.id}?mode=approve"
+                    redirect_url = f"{server_url}{user_redirect_url}"
                     create_notification(
                         message=message,
                         redirect_url=redirect_url,
@@ -698,7 +705,10 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
             category_approvers = updated_instance.category.approvers.all()
             for approver in category_approvers:
                 message = f"The rejected task '{updated_instance.task}' has been Resubmitted and requires your approval"
-                redirect_url = f"/tasks/{updated_instance.id}?mode=approve"
+
+                server_url = settings.server_url
+                user_redirect_url = f"/tasks/{updated_instance.id}?mode=approve"
+                redirect_url = f"{server_url}{user_redirect_url}"
                 
                 # Send notification to each approver
                 create_notification(
@@ -932,7 +942,10 @@ class UpdateApprovalTaskView(APIView):
             
             # Send notification for stage approval
             message = f"Stage '{stage.stage_name}' has been approved by one of the approvers"
-            redirect_url = f"/tasks/view/{task.id}/"
+
+            server_url = settings.server_url
+            user_redirect_url = f"/tasks/view/{task.id}/"
+            redirect_url = f"{server_url}{user_redirect_url}"
             
             # Get all stage approvers for notification
             stage_approvers = StageApprover.objects.filter(stage=stage).exclude(approver__isnull=True)
@@ -945,15 +958,15 @@ class UpdateApprovalTaskView(APIView):
                 )
             
             # Send notification to task approvers as well
-            approvers_for_tasks = TaskApprover.objects.filter(Task=task).exclude(approver__isnull=True)
-            all_approver_ids = [ta.approver.id for ta in approvers_for_tasks if ta.approver and ta.approver.id != current_user_id]
-            for approver_id in all_approver_ids:
-                create_notification(
-                    message=f"The Task {task.task} approved via stage approval",
-                    redirect_url=redirect_url,
-                    recipient_id=approver_id,
-                    created_by=request.user
-                )
+            # approvers_for_tasks = TaskApprover.objects.filter(Task=task).exclude(approver__isnull=True)
+            # all_approver_ids = [ta.approver.id for ta in approvers_for_tasks if ta.approver and ta.approver.id != current_user_id]
+            # for approver_id in all_approver_ids:
+            #     create_notification(
+            #         message=f"The Task {task.task} approved via stage approval",
+            #         redirect_url=redirect_url,
+            #         recipient_id=approver_id,
+            #         created_by=request.user
+            #     )
             
             # Create task history entry for stage approval
             create_task_history(
@@ -999,29 +1012,40 @@ class UpdateApprovalTaskView(APIView):
                 return Response({'error': 'Task Approver not found.'}, status=status.HTTP_404_NOT_FOUND)
             
             # Send notification for stage rejection
-            message = f"Stage '{stage.stage_name}' has been rejected by one of the approvers"
-            redirect_url = f"/tasks/edit/{task.id}/"
-            
-            # Get all stage approvers for notification
-            stage_approvers = StageApprover.objects.filter(stage=stage).exclude(approver__isnull=True)
-            for sa in stage_approvers:
+            message = f"Stage '{stage.stage_name}' has been rejected by one of the approvers for your task '{task.task}'."
+        
+            server_url = settings.server_url
+            user_redirect_url = f"/tasks/edit/{task.id}/"
+            redirect_url = f"{server_url}{user_redirect_url}"
+
+            if task.created_by_id:
                 create_notification(
                     message=message,
                     redirect_url=redirect_url,
-                    recipient_id=sa.approver.id,
+                    recipient_id=task.created_by_id,
                     created_by=request.user
                 )
+
+            # Get all stage approvers for notification
+            # stage_approvers = StageApprover.objects.filter(stage=stage).exclude(approver__isnull=True)
+            # for sa in stage_approvers:
+            #     create_notification(
+            #         message=message,
+            #         redirect_url=redirect_url,
+            #         recipient_id=sa.approver.id,
+            #         created_by=request.user
+            #     )
             
             # Send notification to task approvers as well
-            approvers_for_tasks = TaskApprover.objects.filter(Task=task).exclude(approver__isnull=True)
-            all_approver_ids = [ta.approver.id for ta in approvers_for_tasks if ta.approver and ta.approver.id != current_user_id]
-            for approver_id in all_approver_ids:
-                create_notification(
-                    message=f"The Task {task.task} rejected via stage rejection",
-                    redirect_url=redirect_url,
-                    recipient_id=approver_id,
-                    created_by=request.user
-                )
+            # approvers_for_tasks = TaskApprover.objects.filter(Task=task).exclude(approver__isnull=True)
+            # all_approver_ids = [ta.approver.id for ta in approvers_for_tasks if ta.approver and ta.approver.id != current_user_id]
+            # for approver_id in all_approver_ids:
+            #     create_notification(
+            #         message=f"The Task {task.task} rejected via stage rejection",
+            #         redirect_url=redirect_url,
+            #         recipient_id=approver_id,
+            #         created_by=request.user
+            #     )
             
             # Create task history entry for stage rejection
             create_task_history(
