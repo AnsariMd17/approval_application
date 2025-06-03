@@ -648,7 +648,7 @@ class TaskListCreate(generics.ListCreateAPIView):
                                 recipient_id=approver.id,
                                 created_by=request.user
                             )
-                            break
+                            
         
         create_task_history(
             task=task,
