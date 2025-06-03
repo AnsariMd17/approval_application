@@ -106,9 +106,9 @@ class CategorySerializer(serializers.ModelSerializer):
             stage_approvers = stage_data.pop('stage_approvers', [])
             stage_approval_needed = stage_data.get('stage_approval_needed', False)
             if stage_approval_needed:
-                stage_data['stage_approval_status'] = 'Pending'
+                stage_data['stage_approval_status'] = 'pending'
             else:
-                stage_data['stage_approval_status'] = 'Self-Approved'
+                stage_data['stage_approval_status'] = 'self-approved'
 
             stage_data['created_by'] = created_by
             stage = Stage.objects.create(**stage_data, category=category)
