@@ -618,7 +618,7 @@ class TaskListCreate(generics.ListCreateAPIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             first_stage = stages_qs.first()
-            if first_stage and is_approval_needed:
+            if first_stage and is_approval_needed and first_stage.stage_approval_needed:
                 first_stage_approvers = first_stage.stage_approvers.all()
 
                 if not first_stage_approvers.exists():
