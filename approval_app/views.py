@@ -701,22 +701,31 @@ class TaskRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
                 created_by=request.user,
                 created_at=timezone.now()
             )
-            
-            category_approvers = updated_instance.category.approvers.all()
-            for approver in category_approvers:
-                message = f"The rejected task '{updated_instance.task}' has been Resubmitted and requires your approval"
 
-                server_url = settings.server_url
-                user_redirect_url = f"/tasks/{updated_instance.id}?mode=approve"
-                redirect_url = f"{server_url}{user_redirect_url}"
-                
-                # Send notification to each approver
-                create_notification(
-                    message=message,
-                    redirect_url=redirect_url,
-                    recipient_id=approver.id,
-                    created_by=request.user
-                )
+            category = updated_instance.category
+            if category:
+                stages = category.stages.all()
+                for stage in stages:
+                    rejected_approvers = StageApprover.objects.filter(
+                        stage=stage,
+                        approval_status='Rejected'
+                    )
+                    for stage_approver in rejected_approvers:
+                        approver = stage_approver.approver
+                        if approver:  # Safety check in case of null approver
+                            message = (
+                                f"The task '{updated_instance.task}' has been edited and Resubmitted by the creator, "
+                                f"and is requesting your approval again for the stage: {stage.stage_name}"
+                            )
+                            server_url = settings.server_url
+                            user_redirect_url = f"/tasks/{updated_instance.id}?mode=approve"
+                            redirect_url = f"{server_url}{user_redirect_url}"
+                            create_notification(
+                                message=message,
+                                redirect_url=redirect_url,
+                                recipient_id=approver.id,
+                                created_by=request.user
+                            )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
