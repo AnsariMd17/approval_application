@@ -84,14 +84,15 @@ AUTH_USER_MODEL = 'approval_app.AdminUser'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'approval_db',        # your database name
-        'USER': 'postgres',      # your database user
-        'PASSWORD': 'password123',  # your database user's password
-        'HOST': 'localhost',          # usually 'localhost'
-        'PORT': '5432',               # default PostgreSQL port
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
     }
 }
 
